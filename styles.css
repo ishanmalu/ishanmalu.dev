@@ -114,8 +114,8 @@ h1 {
 
 /* projects: a quest line draws down the left and lights each project as it passes */
 .work { padding: 0 var(--gut); }
-.quest { --p: 0; position: relative; padding-left: 44px; }
-.rail { position: absolute; left: 10px; top: 0; bottom: 28px; width: 1px; background: var(--line); }
+.quest { --p: 0; --rail-end: 28px; position: relative; padding-left: 44px; }
+.rail { position: absolute; left: 10px; top: 0; bottom: var(--rail-end); width: 1px; background: var(--line); }
 .trail {
   position: absolute;
   inset: 0;
@@ -156,7 +156,7 @@ h1 {
   scale: 1.25;
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 16%, transparent), 0 0 18px color-mix(in srgb, var(--c) 70%, transparent);
 }
-.next { position: relative; height: 56px; display: flex; align-items: center; }
+.next { position: relative; height: calc(var(--rail-end) * 2); display: flex; align-items: center; }
 .next .ring {
   position: absolute;
   left: -38px;

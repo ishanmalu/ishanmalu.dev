@@ -142,16 +142,29 @@
   document.querySelectorAll('.split').forEach(el => {
     const text = el.textContent;
     const small = el.classList.contains('by');
-    el.innerHTML = `<span class="vh">${text}</span><span aria-hidden="true">${[...text].map(ch => ch === ' '
-      ? '<span class="sp"></span>'
-      : `<span class="ch" style="--i:${n++}"><b>${ch}</b></span>`).join('')}</span>`;
+    const hidden = document.createElement('span');
+    hidden.className = 'vh';
+    hidden.textContent = text;
+    const letters = document.createElement('span');
+    letters.setAttribute('aria-hidden', 'true');
+    for (const ch of text) {
+      const box = document.createElement('span');
+      if (ch === ' ') { box.className = 'sp'; letters.append(box); continue; }
+      const g = document.createElement('b');
+      g.textContent = ch;
+      box.className = 'ch';
+      box.style.setProperty('--i', n++);
+      box.append(g);
+      letters.append(box);
+      split.push({ el: box, g, small, w: 500, y: 0, o: .55 });
+    }
+    el.replaceChildren(hidden, letters);
     if (el.id === 'title') n += 3;
-    el.querySelectorAll('.ch').forEach(c => split.push({ el: c, g: c.firstChild, small, w: 500, y: 0, o: .55 }));
   });
   // Lock each letter's box to its regular-weight width (in em, so it scales with the viewport).
   // When a letter gets bolder it grows inside that box and the line never shifts.
   function lockWidths() {
-    split.forEach(s => { s.el.style.width = ''; });
+    split.forEach(s => { s.el.style.width = ''; s.w = 500; s.g.style.setProperty('--w', 500); });
     const fs = new Map();
     const ws = split.map(s => s.el.getBoundingClientRect().width);
     split.forEach((s, i) => {
@@ -241,7 +254,7 @@
   }
   rows.forEach((r, i) => {
     r.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') enter(i); });
-    r.addEventListener('focus', () => enter(i));
+    r.addEventListener('focus', () => { if (r.matches(':focus-visible')) enter(i); });
     r.addEventListener('blur', leave);
     r.addEventListener('click', e => { e.preventDefault(); open(i, true); });
   });
@@ -249,7 +262,7 @@
 
   // ---------- project view ----------
   const ov = $('#ov'), main = $('main'), ovBody = $('.body', ov);
-  let ovI = -1, ovc = null, lastFocus = null, pushed = false, swapT = 0;
+  let ovI = -1, ovc = null, lastFocus = null, pushed = false, swapT = 0, covered = false;
 
   function magnetic(el) {
     if (!FINE || RM) return;
@@ -287,7 +300,11 @@
       const a = document.createElement('a');
       a.className = k ? 'btn' : 'btn solid';
       a.href = url; a.target = '_blank'; a.rel = 'noopener';
-      a.innerHTML = `${label} <span class="arr" aria-hidden="true">↗</span>`;
+      const arr = document.createElement('span');
+      arr.className = 'arr';
+      arr.setAttribute('aria-hidden', 'true');
+      arr.textContent = '↗';
+      a.append(label + ' ', arr);
       magnetic(a);
       btns.append(a);
     });
@@ -301,9 +318,16 @@
     ovBody.classList.remove('enter'); void ovBody.offsetWidth; ovBody.classList.add('enter');
   }
 
+  // Each project has its own address (/seedscape). Old #seedscape links still work.
+  const pathOf = i => '/' + P[i].k;
+  const routeIndex = () => {
+    const slug = location.pathname.replace(/^\/+|\/+$/g, '').replace(/\.html$/, '') || location.hash.slice(1);
+    return P.findIndex(p => p.k === slug);
+  };
+
   // Next project: slide the current one out, then bring the new one in.
   function swapTo(i) {
-    history.replaceState(history.state, '', '#' + P[i].k);
+    history.replaceState(history.state, '', pathOf(i));
     if (RM) { fill(i); return; }
     clearTimeout(swapT);
     ovBody.classList.add('leaving');
@@ -316,7 +340,7 @@
   }
 
   function open(i, push) {
-    if (push) { history.pushState({ ov: 1 }, '', '#' + P[i].k); pushed = true; }
+    if (push) { history.pushState({ ov: 1 }, '', pathOf(i)); pushed = true; }
     if (!ov.hidden && ov.classList.contains('on')) { swapTo(i); return; }
     fill(i);
     lastFocus = document.activeElement;
@@ -332,11 +356,15 @@
       ov.classList.add('on');
       ovc = fit($('.vis canvas', ov));
       $('#ovx').focus({ preventScroll: true });
+      setTimeout(() => { if (ov.classList.contains('on')) covered = true; }, RM ? 0 : 850);
     }));
   }
 
   function close(fromHistory) {
     if (ov.hidden || !ov.classList.contains('on')) return;
+    clearTimeout(swapT);
+    ovBody.classList.remove('leaving');
+    covered = false;
     ov.classList.remove('on');
     ov.classList.add('out');
     main.inert = false;
@@ -347,7 +375,7 @@
     RM ? done() : setTimeout(done, 900);
     if (!fromHistory) {
       if (pushed) history.back();
-      else history.replaceState(null, '', location.pathname);
+      else history.replaceState(null, '', '/');
     }
     pushed = false;
     if (lastFocus) lastFocus.focus({ preventScroll: true });
@@ -355,12 +383,16 @@
 
   $('#ovx').addEventListener('click', () => close(false));
   addEventListener('keydown', e => { if (e.key === 'Escape') close(false); });
-  const fromHash = () => {
-    const i = P.findIndex(p => '#' + p.k === location.hash);
-    if (i >= 0) open(i, false); else close(true);
+  // (4) landing on a project address opens it without adding history, and closing returns to "/"
+  const fromRoute = () => {
+    const i = routeIndex();
+    if (i >= 0) {
+      if (location.hash) history.replaceState(null, '', pathOf(i));
+      open(i, false);
+    } else close(true);
   };
-  addEventListener('popstate', fromHash);
-  fromHash();
+  addEventListener('popstate', fromRoute);
+  fromRoute();
 
   // ---------- background + motion loop ----------
   const bg = $('#bg');
@@ -369,7 +401,7 @@
   addEventListener('resize', () => {
     clearTimeout(rt);
     rt = setTimeout(() => {
-      B = fit(bg); cc = fit(cardCanvas);
+      B = fit(bg); cc = fit(cardCanvas); bgDirty = true;
       if (ovc) ovc = fit($('.vis canvas', ov));
       if (root.classList.contains('ready')) lockWidths();
     }, 120);
@@ -377,17 +409,23 @@
 
   // Only a real mouse takes over the spotlight; on touch screens it keeps drifting on its own.
   let mx = innerWidth * .6, my = innerHeight * .35, cx = mx, cy = my, kx = mx, ky = my, vx = 0, last = mx, moved = false;
+  let bgDirty = true;
   addEventListener('pointermove', e => {
     if (e.pointerType !== 'mouse') return;
-    mx = e.clientX; my = e.clientY; moved = true;
+    mx = e.clientX; my = e.clientY; moved = true; bgDirty = true;
   }, { passive: true });
 
   // ---------- the scroll story ----------
   const lift = $('#lift'), quest = $('#quest'), nextEl = $('#next');
   const items = rows.map(r => r.parentElement);
   let liftP = -1, questP = -1, lastLit = -2, endLit = false;
+  const railEnd = parseFloat(getComputedStyle(quest).getPropertyValue('--rail-end')) || 28;
+  // (6) only re-measure when the scroll position or the page size actually changed
+  let seenY = NaN, seenH = 0, seenDoc = 0;
   function story() {
-    const vh = innerHeight;
+    const vh = innerHeight, doc = document.documentElement.scrollHeight;
+    if (scrollY === seenY && vh === seenH && doc === seenDoc) return;
+    seenY = scrollY; seenH = vh; seenDoc = doc;
     // 1. the title lifts, shrinks a touch and dissolves as you leave the first screen
     if (!RM) {
       const p = Math.min(1, Math.max(0, scrollY / (vh * .75)));
@@ -402,7 +440,7 @@
     // 2. the quest line draws down through the projects
     const qr = quest.getBoundingClientRect();
     const head = vh * .62;
-    const railH = qr.height - 28;
+    const railH = qr.height - railEnd;
     // progress runs from "line reaches the list" to the very bottom of the page, so it always finishes
     const start = qr.top + scrollY - head;
     const endY = Math.max(start + 1, document.documentElement.scrollHeight - vh);
@@ -428,7 +466,7 @@
   }
 
   addEventListener('scroll', story, { passive: true });
-  addEventListener('resize', story);
+  addEventListener('resize', () => { seenY = NaN; story(); });
   story();
 
   const t0 = performance.now();
@@ -446,30 +484,6 @@
     fade = RM ? 1 : Math.min(1, fade + dt / 1.4);
 
     if (lenis) lenis.raf(now);
-    story();
-
-    if (cur >= 0) {
-      card.style.transform = `translate(${Math.min(innerWidth - 316, kx + 28)}px,${Math.max(16, ky - 250)}px) rotate(${Math.max(-10, Math.min(10, vx * .5))}deg)`;
-    }
-
-    // dot grid with a spotlight
-    const { x, w, h } = B, rgb = col.map(Math.round).join(',');
-    x.globalAlpha = 1; x.fillStyle = '#09090a'; x.fillRect(0, 0, w, h);
-    const g = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(320, w * .3));
-    g.addColorStop(0, `rgba(${rgb},${.07 * fade})`); g.addColorStop(1, 'rgba(0,0,0,0)');
-    x.fillStyle = g; x.fillRect(0, 0, w, h);
-    const S = 34, R = 220;
-    x.fillStyle = `rgb(${rgb})`;
-    for (let yy = S / 2; yy < h; yy += S) {
-      for (let xx = S / 2; xx < w; xx += S) {
-        const dx = xx - cx, dy = yy - cy, d = Math.hypot(dx, dy);
-        const k = Math.max(0, 1 - d / R), kk = k * k, push = kk * 6;
-        const px = xx + (d ? dx / d * push : 0), py = yy + (d ? dy / d * push : 0);
-        x.globalAlpha = ((.05 + .05 * noise(xx * .01 + t * .2, yy * .01)) * .7 + kk * .55) * fade;
-        const r = 1 + kk * 1.2;
-        x.fillRect(px - r / 2, py - r / 2, r, r);
-      }
-    }
 
     // headline letters lean toward the cursor (or a slow wave on touch screens): read every box first, then write
     if (!RM && root.classList.contains('ready') && scrollY < innerHeight && split.length) {
@@ -492,6 +506,36 @@
           if (Math.abs(o2 - s.o) > .004) { s.o = o2; s.g.style.opacity = o2.toFixed(3); }
         }
       });
+    }
+
+    story();
+
+    if (cur >= 0) {
+      card.style.transform = `translate(${Math.min(innerWidth - 316, kx + 28)}px,${Math.max(16, ky - 250)}px) rotate(${Math.max(-10, Math.min(10, vx * .5))}deg)`;
+    }
+
+    // (5) dot grid with a spotlight: paused while a project covers it, and only redrawn on change under reduced motion
+    const colMoving = Math.abs(col[0] - target[0]) + Math.abs(col[1] - target[1]) + Math.abs(col[2] - target[2]) > .5;
+    const spotMoving = Math.abs(cx - mx) + Math.abs(cy - my) > .5;
+    if (!covered && (!RM || bgDirty || colMoving || spotMoving)) {
+      bgDirty = false;
+      const { x, w, h } = B, rgb = col.map(Math.round).join(',');
+      x.globalAlpha = 1; x.fillStyle = '#09090a'; x.fillRect(0, 0, w, h);
+      const g = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(320, w * .3));
+      g.addColorStop(0, `rgba(${rgb},${.07 * fade})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+      const S = 34, R = 220;
+      x.fillStyle = `rgb(${rgb})`;
+      for (let yy = S / 2; yy < h; yy += S) {
+        for (let xx = S / 2; xx < w; xx += S) {
+          const dx = xx - cx, dy = yy - cy, d = Math.hypot(dx, dy);
+          const k = Math.max(0, 1 - d / R), kk = k * k, push = kk * 6;
+          const px = xx + (d ? dx / d * push : 0), py = yy + (d ? dy / d * push : 0);
+          x.globalAlpha = ((.05 + .05 * noise(xx * .01 + t * .2, yy * .01)) * .7 + kk * .55) * fade;
+          const r = 1 + kk * 1.2;
+          x.fillRect(px - r / 2, py - r / 2, r, r);
+        }
+      }
     }
 
     if (cur >= 0) paint(cc, P[cur].k, t, P[cur].c);
