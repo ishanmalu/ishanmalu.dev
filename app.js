@@ -106,8 +106,8 @@
   // ---------- data from the markup ----------
   const rowsEl = $('#rows');
   const rows = [...rowsEl.querySelectorAll('.row')];
+  const STATUS = { live: 'Live', soon: 'Coming soon', tool: 'Runs locally' };
   const P = rows.map(r => ({
-    el: r,
     k: r.dataset.k,
     n: $('.t', r).textContent,
     d: $('.d', r).textContent,
@@ -121,6 +121,10 @@
     links: r.dataset.links ? r.dataset.links.split(';').map(s => s.split('|')) : [],
   }));
   rows.forEach((r, i) => r.style.setProperty('--c', P[i].c));
+  const statusText = p => p.status === 'tool' ? p.label[0].toUpperCase() + p.label.slice(1) : STATUS[p.status];
+
+  // frame-rate independent easing toward a target
+  const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt));
 
   // ---------- highlight colour ----------
   const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -129,19 +133,33 @@
   function setHL(c) { root.style.setProperty('--hl', c); target = hex(c); }
 
   // ---------- headline split ----------
+  // Letters get their own spans for the animation; a hidden copy keeps the text readable to screen readers.
   const split = [];
   let n = 0;
   document.querySelectorAll('.split').forEach(el => {
     const text = el.textContent;
-    el.setAttribute('aria-label', text);
-    el.innerHTML = [...text].map(ch => ch === ' '
-      ? '<span class="sp" aria-hidden="true"></span>'
-      : `<span class="ch" aria-hidden="true" style="--i:${n++}">${ch}</span>`).join('');
+    const small = el.classList.contains('by');
+    el.innerHTML = `<span class="vh">${text}</span><span aria-hidden="true">${[...text].map(ch => ch === ' '
+      ? '<span class="sp"></span>'
+      : `<span class="ch" style="--i:${n++}"><b>${ch}</b></span>`).join('')}</span>`;
     if (el.id === 'title') n += 3;
-    el.querySelectorAll('.ch').forEach(c => split.push({ el: c, small: el.classList.contains('by'), w: 500, y: 0, o: .55 }));
+    el.querySelectorAll('.ch').forEach(c => split.push({ el: c, g: c.firstChild, small, w: 500, y: 0, o: .55 }));
   });
+  // Lock each letter's box to its regular-weight width (in em, so it scales with the viewport).
+  // When a letter gets bolder it grows inside that box and the line never shifts.
+  function lockWidths() {
+    split.forEach(s => { s.el.style.width = ''; });
+    const fs = new Map();
+    const ws = split.map(s => s.el.getBoundingClientRect().width);
+    split.forEach((s, i) => {
+      const p = s.el.parentElement.parentElement;
+      if (!fs.has(p)) fs.set(p, parseFloat(getComputedStyle(p).fontSize));
+      s.el.style.width = (ws[i] / fs.get(p)).toFixed(4) + 'em';
+    });
+  }
   root.classList.add('fonts-pending');
   Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]).then(() => {
+    lockWidths();
     root.classList.remove('fonts-pending');
     root.classList.add('ready');
   });
@@ -152,6 +170,25 @@
   addEventListener('scroll', cueState, { passive: true });
   cueState();
 
+  // ---------- rows reveal as they scroll in ----------
+  // A plain position check (no IntersectionObserver) plus a safety timer, so rows can never stay hidden.
+  if (!RM) {
+    root.classList.add('reveal');
+    const items = rows.map(r => r.parentElement);
+    const check = () => {
+      let k = 0;
+      const line = innerHeight * .94;
+      items.forEach(li => {
+        if (li.classList.contains('seen')) return;
+        if (li.getBoundingClientRect().top < line) { li.style.setProperty('--r', k++); li.classList.add('seen'); }
+      });
+    };
+    addEventListener('scroll', check, { passive: true });
+    addEventListener('resize', check);
+    check();
+    setTimeout(() => items.forEach(li => li.classList.add('seen')), 4000);
+  }
+
   // ---------- rows ----------
   const CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&*+=';
   function scramble(el, text) {
@@ -159,26 +196,31 @@
     let i = 0;
     clearInterval(el._s);
     el._s = setInterval(() => {
-      el.textContent = [...text].map((c, k) => k < i ? c : CH[Math.random() * CH.length | 0]).join('');
-      i += .5;
+      el.textContent = [...text].map((c, k) => k < i || c === ' ' ? c : CH[Math.random() * CH.length | 0]).join('');
+      i += .6;
       if (i > text.length) { el.textContent = text; clearInterval(el._s); }
-    }, 28);
+    }, 30);
   }
-  const card = $('#card');
-  let cc = fit($('canvas', card));
-  let cur = -1;
+  const card = $('#card'), cardCanvas = $('canvas', card);
+  let cc = fit(cardCanvas);
+  let cur = -1, dwell = 0;
   function enter(i) {
     if (cur === i) return;
+    const first = cur < 0;
     cur = i;
     rows.forEach((r, k) => r.classList.toggle('on', k === i));
     rowsEl.classList.add('hov');
     $('#cn').textContent = P[i].n;
     $('#cs').textContent = P[i].label;
     card.classList.add('on');
+    if (!first) { card.classList.remove('sw'); void card.offsetWidth; card.classList.add('sw'); }
     setHL(P[i].c);
-    scramble($('.t', rows[i]), P[i].n);
+    // only scramble once the cursor settles, so sweeping the list stays calm
+    clearTimeout(dwell);
+    dwell = setTimeout(() => scramble($('.t', rows[i]), P[i].n), 120);
   }
   function leave() {
+    clearTimeout(dwell);
     if (cur < 0) return;
     cur = -1;
     rows.forEach(r => r.classList.remove('on'));
@@ -195,8 +237,8 @@
   rowsEl.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') leave(); });
 
   // ---------- project view ----------
-  const ov = $('#ov'), main = $('main');
-  let ovI = -1, ovc = null, lastFocus = null, pushed = false;
+  const ov = $('#ov'), main = $('main'), ovBody = $('.body', ov);
+  let ovI = -1, ovc = null, lastFocus = null, pushed = false, swapT = 0;
 
   function magnetic(el) {
     if (!FINE || RM) return;
@@ -223,7 +265,7 @@
     });
     const dl = $('#ovl');
     dl.replaceChildren();
-    [['Status', p.label], ['Year', p.y], ['Built with', p.stack]].forEach(([a, b]) => {
+    [['Status', statusText(p)], ['Year', p.y], ['Built with', p.stack]].forEach(([a, b]) => {
       const dt = document.createElement('dt'), dd = document.createElement('dd');
       dt.textContent = a; dd.textContent = b; dl.append(dt, dd);
     });
@@ -240,40 +282,56 @@
     });
     const next = document.createElement('button');
     next.type = 'button'; next.className = 'btn'; next.textContent = 'Next project →';
-    next.onclick = () => open((ovI + 1) % P.length, false, true);
+    next.onclick = () => swapTo((ovI + 1) % P.length);
     magnetic(next);
     btns.append(next);
     setHL(p.c);
+    // replay the staggered entrance
+    ovBody.classList.remove('enter'); void ovBody.offsetWidth; ovBody.classList.add('enter');
   }
 
-  function open(i, push, replace) {
+  // Next project: slide the current one out, then bring the new one in.
+  function swapTo(i) {
+    history.replaceState(history.state, '', '#' + P[i].k);
+    if (RM) { fill(i); return; }
+    clearTimeout(swapT);
+    ovBody.classList.add('leaving');
+    swapT = setTimeout(() => {
+      ov.scrollTo({ top: 0 });
+      ovBody.classList.remove('leaving');
+      fill(i);
+      $('#ovbtn .btn:last-child').focus({ preventScroll: true });
+    }, 260);
+  }
+
+  function open(i, push) {
+    if (push) { history.pushState({ ov: 1 }, '', '#' + P[i].k); pushed = true; }
+    if (!ov.hidden && ov.classList.contains('on')) { swapTo(i); return; }
     fill(i);
-    const hash = '#' + P[i].k;
-    if (push) { history.pushState({ ov: 1 }, '', hash); pushed = true; }
-    else if (replace) history.replaceState(history.state, '', hash);
-    if (!ov.hidden) { ov.scrollTop = 0; return; }
     lastFocus = document.activeElement;
     leave();
     setHL(P[i].c);
+    ov.classList.remove('out');
     ov.hidden = false;
     main.inert = true;
-    document.body.style.overflow = 'hidden';
-    requestAnimationFrame(() => {
+    root.classList.add('locked');
+    ov.scrollTop = 0;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       ov.classList.add('on');
       ovc = fit($('.vis canvas', ov));
       $('#ovx').focus({ preventScroll: true });
-    });
+    }));
   }
 
   function close(fromHistory) {
-    if (ov.hidden) return;
+    if (ov.hidden || !ov.classList.contains('on')) return;
     ov.classList.remove('on');
+    ov.classList.add('out');
     main.inert = false;
-    document.body.style.overflow = '';
+    root.classList.remove('locked');
     setHL(DEFAULT_HL);
-    ovc = null;
-    const done = () => { if (!ov.classList.contains('on')) ov.hidden = true; };
-    RM ? done() : setTimeout(done, 800);
+    const done = () => { if (!ov.classList.contains('on')) { ov.hidden = true; ov.classList.remove('out'); ovc = null; } };
+    RM ? done() : setTimeout(done, 900);
     if (!fromHistory) {
       if (pushed) history.back();
       else history.replaceState(null, '', location.pathname);
@@ -297,30 +355,43 @@
   let rt;
   addEventListener('resize', () => {
     clearTimeout(rt);
-    rt = setTimeout(() => { B = fit(bg); cc = fit($('canvas', card)); if (ovc) ovc = fit($('.vis canvas', ov)); }, 100);
+    rt = setTimeout(() => {
+      B = fit(bg); cc = fit(cardCanvas);
+      if (ovc) ovc = fit($('.vis canvas', ov));
+      if (root.classList.contains('ready')) lockWidths();
+    }, 120);
   });
 
-  let mx = innerWidth * .6, my = innerHeight * .35, cx = mx, cy = my, vx = 0, last = mx, moved = false;
-  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; moved = true; }, { passive: true });
+  // Only a real mouse takes over the spotlight; on touch screens it keeps drifting on its own.
+  let mx = innerWidth * .6, my = innerHeight * .35, cx = mx, cy = my, kx = mx, ky = my, vx = 0, last = mx, moved = false;
+  addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return;
+    mx = e.clientX; my = e.clientY; moved = true;
+  }, { passive: true });
 
   const t0 = performance.now();
+  let prev = t0, fade = 0;
   function frame(now) {
+    const dt = Math.min(.05, (now - prev) / 1000);
+    prev = now;
     const t = RM ? 2 : (now - t0) / 1000;
 
     if (!moved && !RM) { mx = innerWidth * (.55 + .3 * Math.sin(t * .35)); my = innerHeight * (.4 + .2 * Math.sin(t * .5)); }
-    cx += (mx - cx) * .09; cy += (my - cy) * .09;
-    vx = vx * .85 + (mx - last) * .15; last = mx;
-    for (let i = 0; i < 3; i++) col[i] += (target[i] - col[i]) * .06;
+    cx = damp(cx, mx, 5, dt); cy = damp(cy, my, 5, dt);
+    kx = damp(kx, mx, 9, dt); ky = damp(ky, my, 9, dt);
+    vx = damp(vx, mx - last, 10, dt); last = mx;
+    for (let i = 0; i < 3; i++) col[i] = damp(col[i], target[i], 4, dt);
+    fade = RM ? 1 : Math.min(1, fade + dt / 1.4);
 
     if (cur >= 0) {
-      card.style.transform = `translate(${Math.min(innerWidth - 310, cx + 30)}px,${Math.max(16, cy - 240)}px) rotate(${Math.max(-12, Math.min(12, vx * .6))}deg)`;
+      card.style.transform = `translate(${Math.min(innerWidth - 316, kx + 28)}px,${Math.max(16, ky - 250)}px) rotate(${Math.max(-10, Math.min(10, vx * .5))}deg)`;
     }
 
     // dot grid with a spotlight
     const { x, w, h } = B, rgb = col.map(Math.round).join(',');
     x.globalAlpha = 1; x.fillStyle = '#09090a'; x.fillRect(0, 0, w, h);
     const g = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(320, w * .3));
-    g.addColorStop(0, `rgba(${rgb},.07)`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    g.addColorStop(0, `rgba(${rgb},${.07 * fade})`); g.addColorStop(1, 'rgba(0,0,0,0)');
     x.fillStyle = g; x.fillRect(0, 0, w, h);
     const S = 34, R = 220;
     x.fillStyle = `rgb(${rgb})`;
@@ -329,26 +400,31 @@
         const dx = xx - cx, dy = yy - cy, d = Math.hypot(dx, dy);
         const k = Math.max(0, 1 - d / R), kk = k * k, push = kk * 6;
         const px = xx + (d ? dx / d * push : 0), py = yy + (d ? dy / d * push : 0);
-        x.globalAlpha = (.05 + .05 * noise(xx * .01 + t * .2, yy * .01)) * .7 + kk * .55;
+        x.globalAlpha = ((.05 + .05 * noise(xx * .01 + t * .2, yy * .01)) * .7 + kk * .55) * fade;
         const r = 1 + kk * 1.2;
         x.fillRect(px - r / 2, py - r / 2, r, r);
       }
     }
 
-    // headline letters lean toward the cursor: read every box first, then write
-    if (FINE && !RM && root.classList.contains('ready') && scrollY < innerHeight) {
+    // headline letters lean toward the cursor (or a slow wave on touch screens): read every box first, then write
+    if (!RM && root.classList.contains('ready') && scrollY < innerHeight && split.length) {
       const boxes = split.map(s => s.el.getBoundingClientRect());
+      const tb = boxes[0], te = boxes[boxes.length - 1];
+      const ax = FINE ? mx : tb.left + (te.right - tb.left) * (.5 + .5 * Math.sin(t * .45));
+      const ay = FINE ? my : null;
+      const reach = FINE ? 380 : innerWidth * .28, amp = FINE ? 1 : .55;
       split.forEach((s, i) => {
         const r = boxes[i];
-        const k = Math.max(0, 1 - Math.hypot(mx - (r.left + r.width / 2), my - (r.top + r.height / 2)) / 380);
-        const e = k * k * (3 - 2 * k);
-        const w2 = s.w + ((500 + 300 * e) - s.w) * .14;
-        const y2 = s.y + ((-e * (s.small ? .22 : .06) * r.height) - s.y) * .14;
-        if (Math.abs(w2 - s.w) > .05) { s.w = w2; s.el.style.setProperty('--w', w2.toFixed(1)); }
-        if (Math.abs(y2 - s.y) > .02) { s.y = y2; s.el.style.translate = `0 ${y2.toFixed(2)}px`; }
+        const d = ay === null ? Math.abs(ax - (r.left + r.width / 2)) : Math.hypot(ax - (r.left + r.width / 2), ay - (r.top + r.height / 2));
+        const k = Math.max(0, 1 - d / reach);
+        const e = k * k * (3 - 2 * k) * amp;
+        const w2 = damp(s.w, 500 + 300 * e, 7, dt);
+        const y2 = damp(s.y, -e * (s.small ? .22 : .06) * r.height, 7, dt);
+        if (Math.abs(w2 - s.w) > .05) { s.w = w2; s.g.style.setProperty('--w', w2.toFixed(1)); }
+        if (Math.abs(y2 - s.y) > .02) { s.y = y2; s.g.style.translate = `0 ${y2.toFixed(2)}px`; }
         if (s.small) {
-          const o2 = .55 + .45 * e;
-          if (Math.abs(o2 - s.o) > .005) { s.o = o2; s.el.style.opacity = o2.toFixed(3); }
+          const o2 = damp(s.o, .55 + .45 * e, 7, dt);
+          if (Math.abs(o2 - s.o) > .004) { s.o = o2; s.g.style.opacity = o2.toFixed(3); }
         }
       });
     }
