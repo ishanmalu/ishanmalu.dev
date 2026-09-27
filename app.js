@@ -435,7 +435,7 @@
   // ---------- the scroll story ----------
   const lift = $('#lift'), quest = $('#quest'), nextEl = $('#next'), work = $('.work');
   // The list pins in the middle of the screen and the quest line moves one project at a time:
-  // each project is a stop with about half a screen of scroll, and the page settles on the
+  // each project is a stop with about three quarters of a screen of scroll, and the page settles on the
   // nearest stop when you stop scrolling. Skipped when the list is too tall to fit.
   const railEnd = parseFloat(getComputedStyle(quest).getPropertyValue('--rail-end')) || 28;
   let pinned = false, pinTop = 0, pinExtra = 0, seg = 0, stops = [];
@@ -445,7 +445,7 @@
     pinned = qh < vh * .86;
     if (!pinned) return;
     pinTop = Math.round((vh - qh) / 2);
-    seg = Math.round(vh * .5);
+    seg = Math.round(vh * .75);
     pinExtra = seg * P.length;
     // where the line stops: each checkpoint's centre, then the next-quest ring at the very end
     const railLen = qh - railEnd;
