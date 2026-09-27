@@ -442,12 +442,14 @@
   // nearest stop when you stop scrolling. Skipped when the list is too tall to fit.
   const railEnd = parseFloat(getComputedStyle(quest).getPropertyValue('--rail-end')) || 28;
   const items = rows.map(r => r.parentElement);
+  // the height the layout was built for (see the resize handler below)
+  let layoutW = innerWidth, layoutH = innerHeight;
   let pinned = false, pinTop = 0, pinExtra = 0, seg = 0, stops = [];
   // Measured once per layout (load, fonts, resize) so nothing is re-measured while animating.
   let docH = 0, railLen = 1, centers = [];
   function layoutPin() {
     work.classList.remove('pinned');
-    const qh = quest.offsetHeight, vh = innerHeight;
+    const qh = quest.offsetHeight, vh = layoutH;
     railLen = Math.max(1, qh - railEnd);
     centers = items.map(li => li.offsetTop + li.offsetHeight / 2);
     pinned = qh < vh * .86;
@@ -568,7 +570,7 @@
     if (lit !== lastLit) {
       lastLit = lit;
       storyC = lit >= 0 ? P[lit].c : DEFAULT_HL;
-      if (cur < 0 && ov.hidden) rest();
+      if (cur < 0 && !teasing && ov.hidden) rest();
       if (pinned && scrollY < pinStart() - 2) { stepAt = lit >= 0 ? 0 : -1; applyStep(); }
     }
     // 4. the line ends at an open checkpoint: the next quest
@@ -577,11 +579,19 @@
   }
 
   addEventListener('scroll', story, { passive: true });
-  addEventListener('resize', () => { layoutPin(); seenY = NaN; story(); questP = -1; questFrame(1); });
+  // Phone address bars change the height a little while scrolling; re-laying out then would move
+  // the stops under your finger. Only a width change or a big height change (rotation, window resize) counts.
+  addEventListener('resize', () => {
+    if (innerWidth === layoutW && Math.abs(innerHeight - layoutH) < 160) return;
+    layoutW = innerWidth; layoutH = innerHeight;
+    layoutPin(); seenY = NaN; story(); questP = -1; questFrame(1);
+  });
 
-  let settleT = 0, touching = false, dragging = false;
+  let settleT = 0, touching = false, dragging = false, keyTo = -1, keyAt = 0;
   addEventListener('touchstart', () => { touching = true; clearTimeout(settleT); }, { passive: true });
-  addEventListener('touchend', () => { touching = false; queueSettle(); }, { passive: true });
+  const touchDone = () => { touching = false; queueSettle(); };
+  addEventListener('touchend', touchDone, { passive: true });
+  addEventListener('touchcancel', touchDone, { passive: true });
   // a press on the scrollbar (outside the page's width) means the user is dragging it
   addEventListener('pointerdown', e => { if (e.clientX >= document.documentElement.clientWidth) { dragging = true; clearTimeout(settleT); } });
   addEventListener('pointerup', () => { if (dragging) { dragging = false; queueSettle(); } });
@@ -601,14 +611,19 @@
     const down = e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey);
     const up = e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey);
     if (!down && !up) return;
-    if (e.target.closest && e.target.closest('a, button, input, textarea') && e.key === ' ') return;
+    // Space presses buttons and types in fields; everywhere else (links included) it scrolls
+    if (e.key === ' ' && e.target.closest && e.target.closest('button, input, textarea, select, [contenteditable]')) return;
     const start = pinStart(), sPos = (scrollY - start) / seg;
     if (sPos < -.02 || sPos > P.length + .02) return;
-    const here = Math.round(Math.min(P.length, Math.max(0, sPos)));
+    // quick repeated presses queue up: count from where the last press was heading
+    const heading = performance.now() - keyAt < 600 && keyTo >= 0;
+    const here = heading ? keyTo : Math.round(Math.min(P.length, Math.max(0, sPos)));
     const to = here + (down ? 1 : -1);
     if (to < 0 || to > P.length) return; // past either end, scroll normally
     e.preventDefault();
-    anchor = here;
+    // anchor on the stop we're leaving, so the line keeps heading forward during the glide
+    anchor = Math.min(P.length, Math.max(0, down ? Math.floor(sPos + .02) : Math.ceil(sPos - .02)));
+    keyTo = to; keyAt = performance.now();
     glideTo(start + to * seg);
   });
   function queueSettle() { clearTimeout(settleT); settleT = setTimeout(settle, 120); }
