@@ -105,7 +105,7 @@ h1 {
   grid-template-columns: minmax(0, 1fr) 150px 130px;
   align-items: center;
   gap: 16px;
-  padding: 18px 0;
+  padding: 13px 0;
   border-bottom: 1px solid var(--line);
   position: relative;
   transition: opacity .5s var(--ease);
@@ -121,7 +121,7 @@ h1 {
 }
 .row:hover::before, .row:focus-visible::before, .row.on::before { opacity: .07; }
 .row .t {
-  font: 600 clamp(30px, 5.4vw, 68px)/1.05 var(--display);
+  font: 600 clamp(26px, 4.2vw, 52px)/1.05 var(--display);
   letter-spacing: -.04em;
   transition: transform .6s var(--ease), color .5s;
   white-space: nowrap;
@@ -135,7 +135,7 @@ h1 {
 .row .s i.wip { background: #f4c95e; }
 .row .d { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .rows.hov .row:not(.on) { opacity: .28; }
-.row.on .t { transform: translateX(14px); color: var(--c); }
+.row.on .t { transform: translateX(10px); color: var(--c); }
 @media (max-width: 760px) {
   .row { grid-template-columns: minmax(0, 1fr) auto; }
   .row .g { display: none; }
