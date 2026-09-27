@@ -181,7 +181,7 @@
   });
 
   // ---------- smooth scrolling ----------
-  const lenis = window.Lenis && !RM ? new window.Lenis({ lerp: .085, wheelMultiplier: .9, autoRaf: false }) : null;
+  const lenis = window.Lenis && !RM ? new window.Lenis({ lerp: .08, wheelMultiplier: .8, autoRaf: false }) : null;
 
   // ---------- scroll cue ----------
   const cue = $('#cue');
@@ -259,6 +259,23 @@
     r.addEventListener('click', e => { e.preventDefault(); open(i, true); });
   });
   rowsEl.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') leave(); });
+
+  // ---------- next quest teaser ----------
+  // Hovering "next quest" shows a blurred glimpse of that project; clicking opens it.
+  const nextLink = $('#next');
+  const teaseI = P.findIndex(p => p.k === nextLink.dataset.k);
+  let teasing = false;
+  function tease(on) {
+    if (on === teasing || teaseI < 0) return;
+    teasing = on;
+    card.classList.toggle('tease', on);
+    card.classList.toggle('on', on);
+    if (on) { $('#cn').textContent = 'Next quest'; $('#cs').textContent = 'coming soon'; setHL(P[teaseI].c); }
+    else rest();
+  }
+  nextLink.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') tease(true); });
+  nextLink.addEventListener('pointerleave', () => tease(false));
+  nextLink.addEventListener('click', e => { e.preventDefault(); tease(false); if (teaseI >= 0) open(teaseI, true); });
 
   // ---------- project view ----------
   const ov = $('#ov'), main = $('main'), ovBody = $('.body', ov);
@@ -416,7 +433,22 @@
   }, { passive: true });
 
   // ---------- the scroll story ----------
-  const lift = $('#lift'), quest = $('#quest'), nextEl = $('#next');
+  const lift = $('#lift'), quest = $('#quest'), nextEl = $('#next'), work = $('.work');
+  // The list pins in the middle of the screen while the quest line travels, giving each project
+  // about a fifth of a screen of scrolling. Skipped when the list is too tall to fit.
+  let pinned = false, pinTop = 0, pinExtra = 0;
+  function layoutPin() {
+    work.classList.remove('pinned');
+    const qh = quest.offsetHeight, vh = innerHeight;
+    pinned = qh < vh * .86;
+    if (!pinned) return;
+    pinTop = Math.round((vh - qh) / 2);
+    pinExtra = Math.round(P.length * vh * .2);
+    work.style.setProperty('--pin-top', pinTop + 'px');
+    work.style.setProperty('--pin-h', qh + pinExtra + 'px');
+    work.classList.add('pinned');
+  }
+  layoutPin();
   const items = rows.map(r => r.parentElement);
   let liftP = -1, questP = -1, lastLit = -2, endLit = false;
   const railEnd = parseFloat(getComputedStyle(quest).getPropertyValue('--rail-end')) || 28;
@@ -442,9 +474,17 @@
     const head = vh * .62;
     const railH = qr.height - railEnd;
     // progress runs from "line reaches the list" to the very bottom of the page, so it always finishes
-    const start = qr.top + scrollY - head;
-    const endY = Math.max(start + 1, document.documentElement.scrollHeight - vh);
-    const qp = Math.min(1, Math.max(0, (scrollY - start) / (endY - start)));
+    let qp;
+    if (pinned) {
+      // from the moment the list pins until it lets go
+      const startP = work.getBoundingClientRect().top + scrollY - pinTop;
+      const span = Math.max(1, Math.min(pinExtra, document.documentElement.scrollHeight - vh - startP));
+      qp = Math.min(1, Math.max(0, (scrollY - startP) / span));
+    } else {
+      const start = qr.top + scrollY - head;
+      const endY = Math.max(start + 1, document.documentElement.scrollHeight - vh);
+      qp = Math.min(1, Math.max(0, (scrollY - start) / (endY - start)));
+    }
     if (Math.abs(qp - questP) > .0005) { questP = qp; quest.style.setProperty('--p', qp.toFixed(4)); }
     // 3. each project lights up as the line reaches it, and the world takes its colour
     const reach = qr.top + qp * railH;
@@ -466,7 +506,8 @@
   }
 
   addEventListener('scroll', story, { passive: true });
-  addEventListener('resize', () => { seenY = NaN; story(); });
+  addEventListener('resize', () => { layoutPin(); seenY = NaN; story(); });
+  document.fonts.ready.then(() => { layoutPin(); seenY = NaN; story(); });
   story();
 
   const t0 = performance.now();
@@ -510,7 +551,8 @@
 
     story();
 
-    if (cur >= 0) {
+    const shown = cur >= 0 ? cur : teasing ? teaseI : -1;
+    if (shown >= 0) {
       card.style.transform = `translate(${Math.min(innerWidth - 316, kx + 28)}px,${Math.max(16, ky - 250)}px) rotate(${Math.max(-10, Math.min(10, vx * .5))}deg)`;
     }
 
@@ -538,7 +580,7 @@
       }
     }
 
-    if (cur >= 0) paint(cc, P[cur].k, t, P[cur].c);
+    if (shown >= 0) paint(cc, P[shown].k, t, P[shown].c);
     if (ovc) paint(ovc, P[ovI].k, t, P[ovI].c);
     requestAnimationFrame(frame);
   }

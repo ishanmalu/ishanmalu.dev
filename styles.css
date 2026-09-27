@@ -112,6 +112,10 @@ h1 {
 .cue.gone { animation: none; opacity: 0; translate: -50% 10px; pointer-events: none; }
 .cue:hover { color: var(--fg); }
 
+/* pinned: the list holds still while the quest line takes its time (sizes set in app.js) */
+.work.pinned { height: var(--pin-h); }
+.work.pinned .quest { position: sticky; top: var(--pin-top); }
+
 /* projects: a quest line draws down the left and lights each project as it passes */
 .work { padding: 0 var(--gut); }
 .quest { --p: 0; --rail-end: 28px; position: relative; padding-left: 44px; }
@@ -140,23 +144,39 @@ h1 {
 .rows li::before {
   content: "";
   position: absolute;
-  left: -37px;
+  left: -38.5px;
   top: 50%;
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   translate: 0 -50%;
-  border: 1px solid var(--dim);
+  border: 1px solid #ffffff3a;
   background: var(--bg);
   transition: background .7s var(--ease), border-color .7s var(--ease), box-shadow .9s var(--ease), scale .7s cubic-bezier(.34, 1.6, .64, 1);
 }
 .rows li.lit::before {
   background: var(--c);
   border-color: var(--c);
-  scale: 1.25;
+  scale: 1.2;
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 16%, transparent), 0 0 18px color-mix(in srgb, var(--c) 70%, transparent);
 }
-.next { position: relative; height: calc(var(--rail-end) * 2); display: flex; align-items: center; }
+/* a single ring pulses out when the quest line reaches a checkpoint */
+.rows li::after {
+  content: "";
+  position: absolute;
+  left: -38.5px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  translate: 0 -50%;
+  border: 1px solid var(--c);
+  opacity: 0;
+  pointer-events: none;
+}
+.rows li.lit::after { animation: checkpoint 1.1s var(--ease) both; }
+@keyframes checkpoint { from { opacity: .9; scale: 1; } to { opacity: 0; scale: 4.2; } }
+.next { position: relative; height: calc(var(--rail-end) * 2); display: flex; align-items: center; width: fit-content; }
 .next .ring {
   position: absolute;
   left: -38px;
@@ -168,6 +188,8 @@ h1 {
   border: 1px dashed var(--dim);
   transition: border-color .8s var(--ease);
 }
+.next .nl em { font-style: normal; color: #c9a7ff; transition: color .6s var(--ease); }
+.next:hover .nl em, .next:focus-visible .nl em { color: var(--fg); }
 .next .nl { font: 11px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); opacity: 0; transform: translateX(-8px); transition: opacity 1s var(--ease), transform 1s var(--ease), color 1s; }
 .next.lit .ring { border-color: var(--fg); animation: seek 2.4s var(--ease) infinite; }
 .next.lit .nl { opacity: 1; transform: none; color: var(--mut); }
@@ -175,7 +197,7 @@ h1 {
 @media (max-width: 560px) {
   .quest { padding-left: 30px; }
   .rail { left: 6px; }
-  .rows li::before { left: -27px; }
+  .rows li::before, .rows li::after { left: -28.5px; }
   .next .ring { left: -28px; }
 }
 .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
@@ -247,6 +269,7 @@ h1 {
 .card.on { opacity: 1; scale: 1; }
 .card canvas { width: 100%; height: 100%; display: block; }
 .card.sw canvas { animation: cardsw .5s var(--ease); }
+.card.tease canvas { filter: blur(7px) saturate(1.2); transform: scale(1.12); }
 @keyframes cardsw { from { opacity: .25; transform: scale(1.08); } }
 .card .cl { position: absolute; inset: auto 12px 10px; display: flex; justify-content: space-between; font: 11px var(--mono); color: #fff; }
 @media (hover: none), (pointer: coarse) { .card { display: none; } }
