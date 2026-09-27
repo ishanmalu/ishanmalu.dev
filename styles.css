@@ -14,6 +14,11 @@
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; scrollbar-gutter: stable; }
 html.locked { overflow: hidden; }
+/* smooth scrolling (Lenis) */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+.lenis [data-lenis-prevent] { overscroll-behavior: contain; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 body {
   margin: 0;
@@ -70,6 +75,9 @@ h1 {
 }
 @media (max-width: 560px) { h1 { white-space: normal; } }
 
+/* the title lifts away as you scroll (driven from app.js) */
+.lift { will-change: transform, opacity, filter; transform-origin: 50% 40%; }
+
 /* scroll cue: fades in after the intro, drifts away once you scroll */
 .hero { position: relative; }
 .cue {
@@ -104,8 +112,72 @@ h1 {
 .cue.gone { animation: none; opacity: 0; translate: -50% 10px; pointer-events: none; }
 .cue:hover { color: var(--fg); }
 
-/* projects */
+/* projects: a quest line draws down the left and lights each project as it passes */
 .work { padding: 0 var(--gut); }
+.quest { --p: 0; position: relative; padding-left: 44px; }
+.rail { position: absolute; left: 10px; top: 0; bottom: 28px; width: 1px; background: var(--line); }
+.trail {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(#f3f1ec55, var(--hl));
+  transform-origin: top;
+  transform: scaleY(var(--p));
+}
+.rail::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: calc(var(--p) * 100%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  translate: 0 -50%;
+  background: var(--hl);
+  box-shadow: 0 0 14px 2px var(--hl);
+  opacity: min(1, calc(var(--p) * 20));
+}
+.rows li { position: relative; }
+.rows li::before {
+  content: "";
+  position: absolute;
+  left: -37px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  translate: 0 -50%;
+  border: 1px solid var(--dim);
+  background: var(--bg);
+  transition: background .7s var(--ease), border-color .7s var(--ease), box-shadow .9s var(--ease), scale .7s cubic-bezier(.34, 1.6, .64, 1);
+}
+.rows li.lit::before {
+  background: var(--c);
+  border-color: var(--c);
+  scale: 1.25;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 16%, transparent), 0 0 18px color-mix(in srgb, var(--c) 70%, transparent);
+}
+.next { position: relative; height: 56px; display: flex; align-items: center; }
+.next .ring {
+  position: absolute;
+  left: -38px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  translate: 0 -50%;
+  border: 1px dashed var(--dim);
+  transition: border-color .8s var(--ease);
+}
+.next .nl { font: 11px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); opacity: 0; transform: translateX(-8px); transition: opacity 1s var(--ease), transform 1s var(--ease), color 1s; }
+.next.lit .ring { border-color: var(--fg); animation: seek 2.4s var(--ease) infinite; }
+.next.lit .nl { opacity: 1; transform: none; color: var(--mut); }
+@keyframes seek { 0% { box-shadow: 0 0 0 0 #f3f1ec40; } 70%, 100% { box-shadow: 0 0 0 12px #f3f1ec00; } }
+@media (max-width: 560px) {
+  .quest { padding-left: 30px; }
+  .rail { left: 6px; }
+  .rows li::before { left: -27px; }
+  .next .ring { left: -28px; }
+}
 .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
 .row {
   --c: var(--fg);

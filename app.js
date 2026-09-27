@@ -120,7 +120,7 @@
     story: r.dataset.story.split(','),
     links: r.dataset.links ? r.dataset.links.split(';').map(s => s.split('|')) : [],
   }));
-  rows.forEach((r, i) => r.style.setProperty('--c', P[i].c));
+  rows.forEach((r, i) => { r.style.setProperty('--c', P[i].c); r.parentElement.style.setProperty('--c', P[i].c); });
   const statusText = p => p.status === 'tool' ? p.label[0].toUpperCase() + p.label.slice(1) : STATUS[p.status];
 
   // frame-rate independent easing toward a target
@@ -131,6 +131,9 @@
   let target = hex(DEFAULT_HL);
   const col = target.slice();
   function setHL(c) { root.style.setProperty('--hl', c); target = hex(c); }
+  // when nothing is hovered or open, the world takes the colour of the last project the quest line reached
+  let storyC = DEFAULT_HL;
+  const rest = () => setHL(storyC);
 
   // ---------- headline split ----------
   // Letters get their own spans for the animation; a hidden copy keeps the text readable to screen readers.
@@ -164,8 +167,16 @@
     root.classList.add('ready');
   });
 
+  // ---------- smooth scrolling ----------
+  const lenis = window.Lenis && !RM ? new window.Lenis({ lerp: .085, wheelMultiplier: .9, autoRaf: false }) : null;
+
   // ---------- scroll cue ----------
   const cue = $('#cue');
+  cue.addEventListener('click', e => {
+    e.preventDefault();
+    const top = $('#rows').getBoundingClientRect().top + scrollY - innerHeight * .18;
+    lenis ? lenis.scrollTo(top, { duration: 1.8 }) : scrollTo({ top, behavior: RM ? 'auto' : 'smooth' });
+  });
   const cueState = () => cue.classList.toggle('gone', scrollY > 40);
   addEventListener('scroll', cueState, { passive: true });
   cueState();
@@ -226,7 +237,7 @@
     rows.forEach(r => r.classList.remove('on'));
     rowsEl.classList.remove('hov');
     card.classList.remove('on');
-    setHL(DEFAULT_HL);
+    rest();
   }
   rows.forEach((r, i) => {
     r.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') enter(i); });
@@ -314,6 +325,7 @@
     ov.classList.remove('out');
     ov.hidden = false;
     main.inert = true;
+    lenis && lenis.stop();
     root.classList.add('locked');
     ov.scrollTop = 0;
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -329,7 +341,8 @@
     ov.classList.add('out');
     main.inert = false;
     root.classList.remove('locked');
-    setHL(DEFAULT_HL);
+    lenis && lenis.start();
+    rest();
     const done = () => { if (!ov.classList.contains('on')) { ov.hidden = true; ov.classList.remove('out'); ovc = null; } };
     RM ? done() : setTimeout(done, 900);
     if (!fromHistory) {
@@ -369,6 +382,55 @@
     mx = e.clientX; my = e.clientY; moved = true;
   }, { passive: true });
 
+  // ---------- the scroll story ----------
+  const lift = $('#lift'), quest = $('#quest'), nextEl = $('#next');
+  const items = rows.map(r => r.parentElement);
+  let liftP = -1, questP = -1, lastLit = -2, endLit = false;
+  function story() {
+    const vh = innerHeight;
+    // 1. the title lifts, shrinks a touch and dissolves as you leave the first screen
+    if (!RM) {
+      const p = Math.min(1, Math.max(0, scrollY / (vh * .75)));
+      if (Math.abs(p - liftP) > .001) {
+        liftP = p;
+        const e = p * p * (3 - 2 * p);
+        lift.style.transform = `translateY(${(-e * vh * .12).toFixed(1)}px) scale(${(1 - e * .07).toFixed(4)})`;
+        lift.style.opacity = (1 - e).toFixed(3);
+        lift.style.filter = e > .01 ? `blur(${(e * 10).toFixed(2)}px)` : '';
+      }
+    }
+    // 2. the quest line draws down through the projects
+    const qr = quest.getBoundingClientRect();
+    const head = vh * .62;
+    const railH = qr.height - 28;
+    // progress runs from "line reaches the list" to the very bottom of the page, so it always finishes
+    const start = qr.top + scrollY - head;
+    const endY = Math.max(start + 1, document.documentElement.scrollHeight - vh);
+    const qp = Math.min(1, Math.max(0, (scrollY - start) / (endY - start)));
+    if (Math.abs(qp - questP) > .0005) { questP = qp; quest.style.setProperty('--p', qp.toFixed(4)); }
+    // 3. each project lights up as the line reaches it, and the world takes its colour
+    const reach = qr.top + qp * railH;
+    let lit = -1;
+    items.forEach((li, i) => {
+      const r = li.getBoundingClientRect();
+      const on = reach >= r.top + r.height / 2;
+      if (on) lit = i;
+      if (on !== li.classList.contains('lit')) li.classList.toggle('lit', on);
+    });
+    if (lit !== lastLit) {
+      lastLit = lit;
+      storyC = lit >= 0 ? P[lit].c : DEFAULT_HL;
+      if (cur < 0 && ov.hidden) rest();
+    }
+    // 4. the line ends at an open checkpoint: the next quest
+    const end = qp > .995;
+    if (end !== endLit) { endLit = end; nextEl.classList.toggle('lit', end); }
+  }
+
+  addEventListener('scroll', story, { passive: true });
+  addEventListener('resize', story);
+  story();
+
   const t0 = performance.now();
   let prev = t0, fade = 0;
   function frame(now) {
@@ -382,6 +444,9 @@
     vx = damp(vx, mx - last, 10, dt); last = mx;
     for (let i = 0; i < 3; i++) col[i] = damp(col[i], target[i], 4, dt);
     fade = RM ? 1 : Math.min(1, fade + dt / 1.4);
+
+    if (lenis) lenis.raf(now);
+    story();
 
     if (cur >= 0) {
       card.style.transform = `translate(${Math.min(innerWidth - 316, kx + 28)}px,${Math.max(16, ky - 250)}px) rotate(${Math.max(-10, Math.min(10, vx * .5))}deg)`;
