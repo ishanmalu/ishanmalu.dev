@@ -14,7 +14,7 @@ Plain HTML, CSS and JS with no build step. The page opens on the headline, and s
 
 Every project has its own address, for example `ishanmalu.dev/seedscape`. `seedscape.html` and the others are generated copies of `index.html` with their own title, description and canonical URL. `app.js` reads the address and opens that project. Old `/#seedscape` links still work.
 
-After editing `index.html`, regenerate the pages and `sitemap.xml`:
+Vercel regenerates them and `sitemap.xml` on every deploy (the `buildCommand` in `vercel.json`), so they can't go stale. To refresh them locally after editing `index.html`:
 
 ```
 python3 scripts/pages.py

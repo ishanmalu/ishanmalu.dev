@@ -187,7 +187,7 @@
   const cue = $('#cue');
   cue.addEventListener('click', e => {
     e.preventDefault();
-    const top = $('#rows').getBoundingClientRect().top + scrollY - innerHeight * .18;
+    const top = pinned ? pinStart() : $('#rows').getBoundingClientRect().top + scrollY - innerHeight * .18;
     lenis ? lenis.scrollTo(top, { duration: 1.8 }) : scrollTo({ top, behavior: RM ? 'auto' : 'smooth' });
   });
   const cueState = () => cue.classList.toggle('gone', scrollY > 40);
@@ -212,6 +212,9 @@
     check();
     setTimeout(() => items.forEach(li => li.classList.add('seen')), 4000);
   }
+
+  // cmd/ctrl/shift-click or a middle click should open the real address in a new tab, as usual
+  const newTab = e => e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0;
 
   // ---------- rows ----------
   const CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&*+=';
@@ -256,7 +259,7 @@
     r.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') enter(i); });
     r.addEventListener('focus', () => { if (r.matches(':focus-visible')) enter(i); });
     r.addEventListener('blur', leave);
-    r.addEventListener('click', e => { e.preventDefault(); open(i, true); });
+    r.addEventListener('click', e => { if (newTab(e)) return; e.preventDefault(); open(i, true); });
   });
   rowsEl.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') leave(); });
 
@@ -275,7 +278,7 @@
   }
   nextLink.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') tease(true); });
   nextLink.addEventListener('pointerleave', () => tease(false));
-  nextLink.addEventListener('click', e => { e.preventDefault(); tease(false); if (teaseI >= 0) open(teaseI, true); });
+  nextLink.addEventListener('click', e => { if (newTab(e)) return; e.preventDefault(); tease(false); if (teaseI >= 0) open(teaseI, true); });
 
   // ---------- project view ----------
   const ov = $('#ov'), main = $('main'), ovBody = $('.body', ov);
@@ -438,33 +441,47 @@
   // each project is a stop with about three quarters of a screen of scroll, and the page settles on the
   // nearest stop when you stop scrolling. Skipped when the list is too tall to fit.
   const railEnd = parseFloat(getComputedStyle(quest).getPropertyValue('--rail-end')) || 28;
+  const items = rows.map(r => r.parentElement);
   let pinned = false, pinTop = 0, pinExtra = 0, seg = 0, stops = [];
+  // Measured once per layout (load, fonts, resize) so nothing is re-measured while animating.
+  let docH = 0, railLen = 1, centers = [];
   function layoutPin() {
     work.classList.remove('pinned');
     const qh = quest.offsetHeight, vh = innerHeight;
+    railLen = Math.max(1, qh - railEnd);
+    centers = items.map(li => li.offsetTop + li.offsetHeight / 2);
     pinned = qh < vh * .86;
-    if (!pinned) return;
+    if (!pinned) { docH = document.documentElement.scrollHeight; return; }
     pinTop = Math.round((vh - qh) / 2);
     seg = Math.round(vh * .75);
     pinExtra = seg * P.length;
     // where the line stops: each checkpoint's centre, then the next-quest ring at the very end
-    const railLen = qh - railEnd;
-    stops = rows.map(r => { const li = r.parentElement; return (li.offsetTop + li.offsetHeight / 2) / railLen; });
+    stops = centers.map(c => c / railLen);
     stops.push(1);
     work.style.setProperty('--pin-top', pinTop + 'px');
     // the extra pinTop at the end lets the last stop be reached before the page runs out
     work.style.setProperty('--pin-h', qh + pinExtra + pinTop + 'px');
     work.classList.add('pinned');
+    docH = document.documentElement.scrollHeight;
   }
   const pinStart = () => work.getBoundingClientRect().top + scrollY - pinTop;
   const ease = f => f * f * f * (f * (f * 6 - 15) + 10);
   layoutPin();
-  const items = rows.map(r => r.parentElement);
   let liftP = -1, questP = -1, lastLit = -2, endLit = false, stepAt = -1, lastStep = -2;
   // (6) only re-measure when the scroll position or the page size actually changed
   let seenY = NaN, seenH = 0, seenDoc = 0;
+  // Which stop a scroll position means. Moving about 12% of a step away from the project you
+  // were resting on commits to the next one in that direction, like jaru.dev, so a gentle
+  // scroll moves on instead of being pulled back.
+  let anchor = 0;
+  const NUDGE = .12;
+  function stopFor(sPos) {
+    const d = sPos - anchor;
+    const i = d > NUDGE ? Math.ceil(sPos - NUDGE) : d < -NUDGE ? Math.floor(sPos + NUDGE) : anchor;
+    return Math.min(P.length, Math.max(0, i));
+  }
   function story() {
-    const vh = innerHeight, doc = document.documentElement.scrollHeight;
+    const vh = innerHeight, doc = docH;
     if (scrollY === seenY && vh === seenH && doc === seenDoc) return;
     seenY = scrollY; seenH = vh; seenDoc = doc;
     // 1. the title lifts, shrinks a touch and dissolves as you leave the first screen
@@ -484,22 +501,26 @@
       // Like jaru.dev: scroll only chooses the stop (0 = first project ... P.length = next quest),
       // and the line glides to it on its own, easing out as it arrives.
       const sPos = Math.min(P.length, Math.max(0, (scrollY - pinStart()) / seg));
+      // resting on a stop (after a settle or a jump) makes it the new anchor
+      if (Math.abs(sPos - Math.round(sPos)) < .01) anchor = Math.round(sPos);
+      const idx = stopFor(sPos);
       if (scrollY < pinStart()) {
         // before the list pins, the line grows from the top toward the first checkpoint
         const pre = Math.min(1, Math.max(0, (scrollY - pinStart() + vh * .35) / (vh * .35)));
         qTarget = stops[0] * ease(pre);
-        glide = 14;
+        mode = FOLLOW;
       } else {
-        const t2 = stops[Math.round(sPos)];
-        if (t2 !== qTarget || glide !== 0) { qFrom = qShown; qTarget = t2; qT = 0; }
-        glide = 0; // 0 = timed step glide
+        const t2 = stops[idx];
+        if (t2 !== qTarget || mode !== STEP_MODE) { qFrom = qShown; qTarget = t2; qT = 0; }
+        mode = STEP_MODE;
       }
-      stepAt = scrollY >= pinStart() - 2 ? Math.round(sPos) : -1;
+      stepAt = scrollY >= pinStart() - 2 ? idx : -1;
     } else {
       const start = qr.top + scrollY - vh * .62;
       const endY = Math.max(start + 1, doc - vh);
       qTarget = Math.min(1, Math.max(0, (scrollY - start) / (endY - start)));
-      glide = 14;
+      mode = FOLLOW;
+      stepAt = -1; // (4) no dimming when the list isn't pinned
     }
     // one project at a time: the current stop is bright, the rest dim
     if (stepAt !== lastStep) {
@@ -511,22 +532,23 @@
 
   // 3. the line glides toward its target; checkpoints light as it passes them
   // Steps use a fixed 0.75s ease-out, so the line lands exactly on the checkpoint and slows as it arrives.
-  let qShown = 0, qTarget = 0, glide = 14, qFrom = 0, qT = 1;
+  // FOLLOW tracks the scroll closely; STEP_MODE is the timed glide between projects.
+  const FOLLOW = 'follow', STEP_MODE = 'step';
+  let qShown = 0, qTarget = 0, mode = FOLLOW, qFrom = 0, qT = 1;
   const STEP = .75, easeOut = t => 1 - Math.pow(1 - t, 4);
   function questFrame(dt) {
     let qp;
     if (RM) qp = qTarget;
-    else if (glide === 0) { qT = Math.min(1, qT + dt / STEP); qp = qFrom + (qTarget - qFrom) * easeOut(qT); }
-    else qp = damp(qShown, qTarget, glide, dt);
+    else if (mode === STEP_MODE) { qT = Math.min(1, qT + dt / STEP); qp = qFrom + (qTarget - qFrom) * easeOut(qT); }
+    else qp = damp(qShown, qTarget, 14, dt);
     if (Math.abs(qp - qShown) < .00005 && questP >= 0) return;
     qShown = Math.abs(qp - qTarget) < .0002 ? qTarget : qp;
     if (Math.abs(qShown - questP) > .0002 || qShown === qTarget) { questP = qShown; quest.style.setProperty('--p', qShown.toFixed(4)); }
-    const railH = quest.offsetHeight - railEnd;
-    const reach = qShown * railH;
+    const reach = qShown * railLen;
     let lit = -1;
     items.forEach((li, i) => {
-      // layout position, not the on-screen one, so the rise-in animation can't delay a checkpoint
-      const on = reach >= li.offsetTop + li.offsetHeight / 2 - 1;
+      // cached layout positions, not on-screen ones, so the rise-in animation can't delay a checkpoint
+      const on = reach >= centers[i] - 1;
       if (on) lit = i;
       if (on !== li.classList.contains('lit')) li.classList.toggle('lit', on);
     });
@@ -541,24 +563,40 @@
   }
 
   addEventListener('scroll', story, { passive: true });
-  addEventListener('resize', () => { layoutPin(); seenY = NaN; story(); questFrame(1); });
+  addEventListener('resize', () => { layoutPin(); seenY = NaN; story(); questP = -1; questFrame(1); });
 
-  let settleT = 0, touching = false;
+  let settleT = 0, touching = false, dragging = false;
   addEventListener('touchstart', () => { touching = true; clearTimeout(settleT); }, { passive: true });
   addEventListener('touchend', () => { touching = false; queueSettle(); }, { passive: true });
+  // a press on the scrollbar (outside the page's width) means the user is dragging it
+  addEventListener('pointerdown', e => { if (e.clientX >= document.documentElement.clientWidth) { dragging = true; clearTimeout(settleT); } });
+  addEventListener('pointerup', () => { if (dragging) { dragging = false; queueSettle(); } });
+  const glideTo = y => lenis ? lenis.scrollTo(y, { duration: .55, easing: t => 1 - Math.pow(1 - t, 3) }) : scrollTo({ top: y, behavior: RM ? 'auto' : 'smooth' });
   function settle() {
-    if (!pinned || touching || !ov.hidden) return;
+    if (!pinned || touching || dragging || !ov.hidden) return;
     if (lenis && Math.abs(lenis.velocity) > .15) { queueSettle(); return; }
     const start = pinStart(), sPos = (scrollY - start) / seg;
     if (sPos < -.02 || sPos > P.length + .02) return;
-    const target = start + Math.round(Math.min(P.length, Math.max(0, sPos))) * seg;
+    const target = start + stopFor(Math.min(P.length, Math.max(0, sPos))) * seg;
     if (Math.abs(target - scrollY) < 2) return;
-    if (lenis) lenis.scrollTo(target, { duration: .55, easing: t => 1 - Math.pow(1 - t, 3) });
-    else scrollTo({ top: target, behavior: RM ? 'auto' : 'smooth' });
+    glideTo(target);
   }
+  // (1) arrow keys move one project at a time while the list is pinned
+  addEventListener('keydown', e => {
+    if (!pinned || !ov.hidden || e.altKey || e.metaKey || e.ctrlKey) return;
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const start = pinStart(), sPos = (scrollY - start) / seg;
+    if (sPos < -.02 || sPos > P.length + .02) return;
+    const here = Math.round(Math.min(P.length, Math.max(0, sPos)));
+    const to = here + (e.key === 'ArrowDown' ? 1 : -1);
+    if (to < 0 || to > P.length) return; // past either end, scroll normally
+    e.preventDefault();
+    anchor = here;
+    glideTo(start + to * seg);
+  });
   function queueSettle() { clearTimeout(settleT); settleT = setTimeout(settle, 120); }
   addEventListener('scroll', () => { if (!touching) queueSettle(); }, { passive: true });
-  document.fonts.ready.then(() => { layoutPin(); seenY = NaN; story(); });
+  document.fonts.ready.then(() => { layoutPin(); seenY = NaN; story(); questP = -1; });
   story();
 
   const t0 = performance.now();
