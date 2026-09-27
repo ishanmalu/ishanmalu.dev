@@ -527,6 +527,12 @@
       lastStep = stepAt;
       rowsEl.classList.toggle('step', pinned && stepAt >= 0 && stepAt < P.length);
       items.forEach((li, i) => li.classList.toggle('cur', i === stepAt));
+      // arriving at a project by scrolling plays the same name effect as hovering it
+      if (stepAt >= 0 && stepAt < P.length && cur < 0) {
+        clearTimeout(dwell);
+        const i = stepAt;
+        dwell = setTimeout(() => { if (lastStep === i && cur < 0) scramble($('.t', rows[i]), P[i].n); }, 120);
+      }
     }
   }
 
