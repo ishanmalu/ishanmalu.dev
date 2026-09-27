@@ -434,24 +434,33 @@
 
   // ---------- the scroll story ----------
   const lift = $('#lift'), quest = $('#quest'), nextEl = $('#next'), work = $('.work');
-  // The list pins in the middle of the screen while the quest line travels, giving each project
-  // about a fifth of a screen of scrolling. Skipped when the list is too tall to fit.
-  let pinned = false, pinTop = 0, pinExtra = 0;
+  // The list pins in the middle of the screen and the quest line moves one project at a time:
+  // each project is a stop with about half a screen of scroll, and the page settles on the
+  // nearest stop when you stop scrolling. Skipped when the list is too tall to fit.
+  const railEnd = parseFloat(getComputedStyle(quest).getPropertyValue('--rail-end')) || 28;
+  let pinned = false, pinTop = 0, pinExtra = 0, seg = 0, stops = [];
   function layoutPin() {
     work.classList.remove('pinned');
     const qh = quest.offsetHeight, vh = innerHeight;
     pinned = qh < vh * .86;
     if (!pinned) return;
     pinTop = Math.round((vh - qh) / 2);
-    pinExtra = Math.round(P.length * vh * .2);
+    seg = Math.round(vh * .5);
+    pinExtra = seg * P.length;
+    // where the line stops: each checkpoint's centre, then the next-quest ring at the very end
+    const railLen = qh - railEnd;
+    stops = rows.map(r => { const li = r.parentElement; return (li.offsetTop + li.offsetHeight / 2) / railLen; });
+    stops.push(1);
     work.style.setProperty('--pin-top', pinTop + 'px');
-    work.style.setProperty('--pin-h', qh + pinExtra + 'px');
+    // the extra pinTop at the end lets the last stop be reached before the page runs out
+    work.style.setProperty('--pin-h', qh + pinExtra + pinTop + 'px');
     work.classList.add('pinned');
   }
+  const pinStart = () => work.getBoundingClientRect().top + scrollY - pinTop;
+  const ease = f => f * f * f * (f * (f * 6 - 15) + 10);
   layoutPin();
   const items = rows.map(r => r.parentElement);
-  let liftP = -1, questP = -1, lastLit = -2, endLit = false;
-  const railEnd = parseFloat(getComputedStyle(quest).getPropertyValue('--rail-end')) || 28;
+  let liftP = -1, questP = -1, lastLit = -2, endLit = false, stepAt = -1, lastStep = -2;
   // (6) only re-measure when the scroll position or the page size actually changed
   let seenY = NaN, seenH = 0, seenDoc = 0;
   function story() {
@@ -476,10 +485,16 @@
     // progress runs from "line reaches the list" to the very bottom of the page, so it always finishes
     let qp;
     if (pinned) {
-      // from the moment the list pins until it lets go
-      const startP = work.getBoundingClientRect().top + scrollY - pinTop;
-      const span = Math.max(1, Math.min(pinExtra, document.documentElement.scrollHeight - vh - startP));
-      qp = Math.min(1, Math.max(0, (scrollY - startP) / span));
+      // s counts stops: 0 = first project ... P.length = next quest. The line eases between stops.
+      const sPos = Math.min(P.length, Math.max(0, (scrollY - pinStart()) / seg));
+      const k = Math.min(P.length - 1, Math.floor(sPos));
+      qp = scrollY < pinStart() ? 0 : stops[k] + (stops[k + 1] - stops[k]) * ease(sPos - k);
+      // before the first stop the line grows from the top to the first checkpoint
+      if (scrollY < pinStart()) {
+        const pre = Math.min(1, Math.max(0, (scrollY - pinStart() + vh * .35) / (vh * .35)));
+        qp = stops[0] * ease(pre);
+      }
+      stepAt = scrollY >= pinStart() - 2 ? Math.round(sPos) : -1;
     } else {
       const start = qr.top + scrollY - head;
       const endY = Math.max(start + 1, document.documentElement.scrollHeight - vh);
@@ -490,8 +505,8 @@
     const reach = qr.top + qp * railH;
     let lit = -1;
     items.forEach((li, i) => {
-      const r = li.getBoundingClientRect();
-      const on = reach >= r.top + r.height / 2;
+      // layout position, not the on-screen one, so the rise-in animation can't delay a checkpoint
+      const on = reach >= qr.top + li.offsetTop + li.offsetHeight / 2 - 1;
       if (on) lit = i;
       if (on !== li.classList.contains('lit')) li.classList.toggle('lit', on);
     });
@@ -500,6 +515,12 @@
       storyC = lit >= 0 ? P[lit].c : DEFAULT_HL;
       if (cur < 0 && ov.hidden) rest();
     }
+    // one project at a time: the current stop is bright, the rest dim
+    if (stepAt !== lastStep) {
+      lastStep = stepAt;
+      rowsEl.classList.toggle('step', pinned && stepAt >= 0 && stepAt < P.length);
+      items.forEach((li, i) => li.classList.toggle('cur', i === stepAt));
+    }
     // 4. the line ends at an open checkpoint: the next quest
     const end = qp > .995;
     if (end !== endLit) { endLit = end; nextEl.classList.toggle('lit', end); }
@@ -507,6 +528,22 @@
 
   addEventListener('scroll', story, { passive: true });
   addEventListener('resize', () => { layoutPin(); seenY = NaN; story(); });
+
+  let settleT = 0, touching = false;
+  addEventListener('touchstart', () => { touching = true; clearTimeout(settleT); }, { passive: true });
+  addEventListener('touchend', () => { touching = false; queueSettle(); }, { passive: true });
+  function settle() {
+    if (!pinned || touching || !ov.hidden) return;
+    if (lenis && Math.abs(lenis.velocity) > .15) { queueSettle(); return; }
+    const start = pinStart(), sPos = (scrollY - start) / seg;
+    if (sPos < -.02 || sPos > P.length + .02) return;
+    const target = start + Math.round(Math.min(P.length, Math.max(0, sPos))) * seg;
+    if (Math.abs(target - scrollY) < 2) return;
+    if (lenis) lenis.scrollTo(target, { duration: .9, easing: t => 1 - Math.pow(1 - t, 3) });
+    else scrollTo({ top: target, behavior: RM ? 'auto' : 'smooth' });
+  }
+  function queueSettle() { clearTimeout(settleT); settleT = setTimeout(settle, 170); }
+  addEventListener('scroll', () => { if (!touching) queueSettle(); }, { passive: true });
   document.fonts.ready.then(() => { layoutPin(); seenY = NaN; story(); });
   story();
 
