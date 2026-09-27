@@ -120,7 +120,7 @@
     story: r.dataset.story.split(','),
     links: r.dataset.links ? r.dataset.links.split(';').map(s => s.split('|')) : [],
   }));
-  rows.forEach((r, i) => { r.style.setProperty('--c', P[i].c); r.parentElement.style.setProperty('--c', P[i].c); });
+  rows.forEach((r, i) => { r.style.setProperty('--c', P[i].c); r.parentElement.style.setProperty('--c', P[i].c); r.parentElement.style.setProperty('--n', i); });
   const statusText = p => p.status === 'tool' ? p.label[0].toUpperCase() + p.label.slice(1) : STATUS[p.status];
 
   // frame-rate independent easing toward a target
@@ -174,7 +174,7 @@
     });
   }
   root.classList.add('fonts-pending');
-  Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]).then(() => {
+  Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 800))]).then(() => {
     lockWidths();
     root.classList.remove('fonts-pending');
     root.classList.add('ready');
@@ -470,11 +470,11 @@
   let liftP = -1, questP = -1, lastLit = -2, endLit = false, stepAt = -1, lastStep = -2;
   // (6) only re-measure when the scroll position or the page size actually changed
   let seenY = NaN, seenH = 0, seenDoc = 0;
-  // Which stop a scroll position means. Moving about 12% of a step away from the project you
+  // Which stop a scroll position means. Moving about 8% of a step (one mouse-wheel notch) away from the project you
   // were resting on commits to the next one in that direction, like jaru.dev, so a gentle
   // scroll moves on instead of being pulled back.
   let anchor = 0;
-  const NUDGE = .12;
+  const NUDGE = .08;
   function stopFor(sPos) {
     const d = sPos - anchor;
     const i = d > NUDGE ? Math.ceil(sPos - NUDGE) : d < -NUDGE ? Math.floor(sPos + NUDGE) : anchor;
@@ -492,7 +492,7 @@
         const e = p * p * (3 - 2 * p);
         lift.style.transform = `translateY(${(-e * vh * .12).toFixed(1)}px) scale(${(1 - e * .07).toFixed(4)})`;
         lift.style.opacity = (1 - e).toFixed(3);
-        lift.style.filter = e > .01 ? `blur(${(e * 10).toFixed(2)}px)` : '';
+        lift.style.filter = e > .01 ? `blur(${(e * 6).toFixed(2)}px)` : '';
       }
     }
     // 2. scrolling picks where the quest line should be; questFrame() glides it there
@@ -514,7 +514,8 @@
         if (t2 !== qTarget || mode !== STEP_MODE) { qFrom = qShown; qTarget = t2; qT = 0; }
         mode = STEP_MODE;
       }
-      stepAt = scrollY >= pinStart() - 2 ? idx : -1;
+      // before the list pins, the first project comes into focus the moment its checkpoint lights
+      stepAt = scrollY >= pinStart() - 2 ? idx : lastLit >= 0 ? 0 : -1;
     } else {
       const start = qr.top + scrollY - vh * .62;
       const endY = Math.max(start + 1, doc - vh);
@@ -523,9 +524,15 @@
       stepAt = -1; // (4) no dimming when the list isn't pinned
     }
     // one project at a time: the current stop is bright, the rest dim
+    applyStep();
+  }
+
+  // One project in focus at a time. Reaching the last checkpoint brightens the list top to bottom.
+  function applyStep() {
     if (stepAt !== lastStep) {
       lastStep = stepAt;
       rowsEl.classList.toggle('step', pinned && stepAt >= 0 && stepAt < P.length);
+      rowsEl.classList.toggle('done', pinned && stepAt === P.length);
       items.forEach((li, i) => li.classList.toggle('cur', i === stepAt));
       // arriving at a project by scrolling plays the same name effect as hovering it
       if (stepAt >= 0 && stepAt < P.length && cur < 0) {
@@ -562,6 +569,7 @@
       lastLit = lit;
       storyC = lit >= 0 ? P[lit].c : DEFAULT_HL;
       if (cur < 0 && ov.hidden) rest();
+      if (pinned && scrollY < pinStart() - 2) { stepAt = lit >= 0 ? 0 : -1; applyStep(); }
     }
     // 4. the line ends at an open checkpoint: the next quest
     const end = qShown > .995;
@@ -587,14 +595,17 @@
     if (Math.abs(target - scrollY) < 2) return;
     glideTo(target);
   }
-  // (1) arrow keys move one project at a time while the list is pinned
+  // arrow keys, Page Up/Down and Space move exactly one project at a time while the list is pinned
   addEventListener('keydown', e => {
     if (!pinned || !ov.hidden || e.altKey || e.metaKey || e.ctrlKey) return;
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const down = e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey);
+    const up = e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey);
+    if (!down && !up) return;
+    if (e.target.closest && e.target.closest('a, button, input, textarea') && e.key === ' ') return;
     const start = pinStart(), sPos = (scrollY - start) / seg;
     if (sPos < -.02 || sPos > P.length + .02) return;
     const here = Math.round(Math.min(P.length, Math.max(0, sPos)));
-    const to = here + (e.key === 'ArrowDown' ? 1 : -1);
+    const to = here + (down ? 1 : -1);
     if (to < 0 || to > P.length) return; // past either end, scroll normally
     e.preventDefault();
     anchor = here;
@@ -622,7 +633,7 @@
     if (lenis) lenis.raf(now);
 
     // headline letters lean toward the cursor (or a slow wave on touch screens): read every box first, then write
-    if (!RM && root.classList.contains('ready') && scrollY < innerHeight && split.length) {
+    if (!RM && root.classList.contains('ready') && liftP < .98 && split.length) {
       const boxes = split.map(s => s.el.getBoundingClientRect());
       const tb = boxes[0], te = boxes[boxes.length - 1];
       const ax = FINE ? mx : tb.left + (te.right - tb.left) * (.5 + .5 * Math.sin(t * .45));
