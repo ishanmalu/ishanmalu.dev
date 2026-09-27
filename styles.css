@@ -164,18 +164,9 @@ h1 {
 @media (hover: none), (pointer: coarse) { .card { display: none; } }
 
 /* socials */
-.links { display: flex; gap: 10px; justify-content: center; padding-block: clamp(28px, 4vw, 44px); }
-.ic {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  color: var(--mut);
-  transition: color .4s var(--ease), border-color .4s var(--ease), background .4s var(--ease), transform .6s var(--ease);
-}
-.ic:hover, .ic:focus-visible { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+.links { display: flex; gap: 18px; justify-content: center; padding-block: 22px; }
+.ic { display: grid; place-items: center; color: var(--dim); transition: color .4s var(--ease), transform .6s var(--ease); }
+.ic:hover, .ic:focus-visible { color: var(--fg); }
 
 /* project view */
 .ov {
