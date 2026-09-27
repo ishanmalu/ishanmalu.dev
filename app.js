@@ -539,10 +539,10 @@
     if (sPos < -.02 || sPos > P.length + .02) return;
     const target = start + Math.round(Math.min(P.length, Math.max(0, sPos))) * seg;
     if (Math.abs(target - scrollY) < 2) return;
-    if (lenis) lenis.scrollTo(target, { duration: .9, easing: t => 1 - Math.pow(1 - t, 3) });
+    if (lenis) lenis.scrollTo(target, { duration: .55, easing: t => 1 - Math.pow(1 - t, 3) });
     else scrollTo({ top: target, behavior: RM ? 'auto' : 'smooth' });
   }
-  function queueSettle() { clearTimeout(settleT); settleT = setTimeout(settle, 170); }
+  function queueSettle() { clearTimeout(settleT); settleT = setTimeout(settle, 120); }
   addEventListener('scroll', () => { if (!touching) queueSettle(); }, { passive: true });
   document.fonts.ready.then(() => { layoutPin(); seenY = NaN; story(); });
   story();
