@@ -164,12 +164,12 @@ h1 {
 @media (hover: none), (pointer: coarse) { .card { display: none; } }
 
 /* socials */
-.links { display: flex; gap: 14px; justify-content: center; padding-block: clamp(56px, 8vw, 96px); }
+.links { display: flex; gap: 10px; justify-content: center; padding-block: clamp(28px, 4vw, 44px); }
 .ic {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   border: 1px solid var(--line);
   color: var(--mut);
