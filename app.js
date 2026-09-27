@@ -181,7 +181,7 @@
   });
 
   // ---------- smooth scrolling ----------
-  const lenis = window.Lenis && !RM ? new window.Lenis({ lerp: .08, wheelMultiplier: .8, autoRaf: false }) : null;
+  const lenis = window.Lenis && !RM ? new window.Lenis({ lerp: .06, wheelMultiplier: .75, autoRaf: false }) : null;
 
   // ---------- scroll cue ----------
   const cue = $('#cue');
@@ -478,35 +478,55 @@
         lift.style.filter = e > .01 ? `blur(${(e * 10).toFixed(2)}px)` : '';
       }
     }
-    // 2. the quest line draws down through the projects
+    // 2. scrolling picks where the quest line should be; questFrame() glides it there
     const qr = quest.getBoundingClientRect();
-    const head = vh * .62;
-    const railH = qr.height - railEnd;
-    // progress runs from "line reaches the list" to the very bottom of the page, so it always finishes
-    let qp;
     if (pinned) {
-      // s counts stops: 0 = first project ... P.length = next quest. The line eases between stops.
+      // Like jaru.dev: scroll only chooses the stop (0 = first project ... P.length = next quest),
+      // and the line glides to it on its own, easing out as it arrives.
       const sPos = Math.min(P.length, Math.max(0, (scrollY - pinStart()) / seg));
-      const k = Math.min(P.length - 1, Math.floor(sPos));
-      qp = scrollY < pinStart() ? 0 : stops[k] + (stops[k + 1] - stops[k]) * ease(sPos - k);
-      // before the first stop the line grows from the top to the first checkpoint
       if (scrollY < pinStart()) {
+        // before the list pins, the line grows from the top toward the first checkpoint
         const pre = Math.min(1, Math.max(0, (scrollY - pinStart() + vh * .35) / (vh * .35)));
-        qp = stops[0] * ease(pre);
+        qTarget = stops[0] * ease(pre);
+        glide = 14;
+      } else {
+        const t2 = stops[Math.round(sPos)];
+        if (t2 !== qTarget || glide !== 0) { qFrom = qShown; qTarget = t2; qT = 0; }
+        glide = 0; // 0 = timed step glide
       }
       stepAt = scrollY >= pinStart() - 2 ? Math.round(sPos) : -1;
     } else {
-      const start = qr.top + scrollY - head;
-      const endY = Math.max(start + 1, document.documentElement.scrollHeight - vh);
-      qp = Math.min(1, Math.max(0, (scrollY - start) / (endY - start)));
+      const start = qr.top + scrollY - vh * .62;
+      const endY = Math.max(start + 1, doc - vh);
+      qTarget = Math.min(1, Math.max(0, (scrollY - start) / (endY - start)));
+      glide = 14;
     }
-    if (Math.abs(qp - questP) > .0005) { questP = qp; quest.style.setProperty('--p', qp.toFixed(4)); }
-    // 3. each project lights up as the line reaches it, and the world takes its colour
-    const reach = qr.top + qp * railH;
+    // one project at a time: the current stop is bright, the rest dim
+    if (stepAt !== lastStep) {
+      lastStep = stepAt;
+      rowsEl.classList.toggle('step', pinned && stepAt >= 0 && stepAt < P.length);
+      items.forEach((li, i) => li.classList.toggle('cur', i === stepAt));
+    }
+  }
+
+  // 3. the line glides toward its target; checkpoints light as it passes them
+  // Steps use a fixed 0.75s ease-out, so the line lands exactly on the checkpoint and slows as it arrives.
+  let qShown = 0, qTarget = 0, glide = 14, qFrom = 0, qT = 1;
+  const STEP = .75, easeOut = t => 1 - Math.pow(1 - t, 4);
+  function questFrame(dt) {
+    let qp;
+    if (RM) qp = qTarget;
+    else if (glide === 0) { qT = Math.min(1, qT + dt / STEP); qp = qFrom + (qTarget - qFrom) * easeOut(qT); }
+    else qp = damp(qShown, qTarget, glide, dt);
+    if (Math.abs(qp - qShown) < .00005 && questP >= 0) return;
+    qShown = Math.abs(qp - qTarget) < .0002 ? qTarget : qp;
+    if (Math.abs(qShown - questP) > .0002 || qShown === qTarget) { questP = qShown; quest.style.setProperty('--p', qShown.toFixed(4)); }
+    const railH = quest.offsetHeight - railEnd;
+    const reach = qShown * railH;
     let lit = -1;
     items.forEach((li, i) => {
       // layout position, not the on-screen one, so the rise-in animation can't delay a checkpoint
-      const on = reach >= qr.top + li.offsetTop + li.offsetHeight / 2 - 1;
+      const on = reach >= li.offsetTop + li.offsetHeight / 2 - 1;
       if (on) lit = i;
       if (on !== li.classList.contains('lit')) li.classList.toggle('lit', on);
     });
@@ -515,19 +535,13 @@
       storyC = lit >= 0 ? P[lit].c : DEFAULT_HL;
       if (cur < 0 && ov.hidden) rest();
     }
-    // one project at a time: the current stop is bright, the rest dim
-    if (stepAt !== lastStep) {
-      lastStep = stepAt;
-      rowsEl.classList.toggle('step', pinned && stepAt >= 0 && stepAt < P.length);
-      items.forEach((li, i) => li.classList.toggle('cur', i === stepAt));
-    }
     // 4. the line ends at an open checkpoint: the next quest
-    const end = qp > .995;
+    const end = qShown > .995;
     if (end !== endLit) { endLit = end; nextEl.classList.toggle('lit', end); }
   }
 
   addEventListener('scroll', story, { passive: true });
-  addEventListener('resize', () => { layoutPin(); seenY = NaN; story(); });
+  addEventListener('resize', () => { layoutPin(); seenY = NaN; story(); questFrame(1); });
 
   let settleT = 0, touching = false;
   addEventListener('touchstart', () => { touching = true; clearTimeout(settleT); }, { passive: true });
@@ -587,6 +601,7 @@
     }
 
     story();
+    questFrame(dt);
 
     const shown = cur >= 0 ? cur : teasing ? teaseI : -1;
     if (shown >= 0) {
