@@ -146,6 +146,12 @@
     root.classList.add('ready');
   });
 
+  // ---------- scroll cue ----------
+  const cue = $('#cue');
+  const cueState = () => cue.classList.toggle('gone', scrollY > 40);
+  addEventListener('scroll', cueState, { passive: true });
+  cueState();
+
   // ---------- rows ----------
   const CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&*+=';
   function scramble(el, text) {

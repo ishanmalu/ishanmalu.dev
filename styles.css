@@ -36,7 +36,7 @@ main { position: relative; z-index: 1; }
   display: grid;
   place-items: center;
   text-align: center;
-  padding: 40px var(--gut);
+  padding: 40px var(--gut) 120px;
 }
 h1 {
   font: 500 clamp(64px, 15vw, 230px)/.9 var(--display);
@@ -61,6 +61,40 @@ h1 {
 .fonts-pending .split { visibility: hidden; }
 @keyframes blurin { from { opacity: 0; filter: blur(14px); transform: translateY(.18em) scale(.96); } }
 @media (max-width: 560px) { h1 { white-space: normal; } }
+
+/* scroll cue: fades in after the intro, drifts away once you scroll */
+.hero { position: relative; }
+.cue {
+  position: absolute;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  translate: -50% 0;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  font: 11px var(--mono);
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--mut);
+  opacity: 0;
+  transition: opacity .8s var(--ease), translate .8s var(--ease);
+}
+.cue i { position: relative; width: 1px; height: 44px; background: var(--line); overflow: hidden; }
+.cue i::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -40%;
+  width: 1px;
+  height: 40%;
+  background: linear-gradient(transparent, var(--fg));
+  animation: drip 2.2s var(--ease) infinite;
+}
+@keyframes drip { to { top: 100%; } }
+.ready .cue { animation: cuein 1.8s var(--ease) 2.4s both; }
+@keyframes cuein { from { opacity: 0; translate: -50% -10px; } to { opacity: 1; translate: -50% 0; } }
+.cue.gone { animation: none; opacity: 0; translate: -50% 10px; pointer-events: none; }
+.cue:hover { color: var(--fg); }
 
 /* projects */
 .work { padding: 0 var(--gut); }
@@ -223,5 +257,6 @@ h1 {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  .ready .cue { opacity: 1; }
   *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
 }
