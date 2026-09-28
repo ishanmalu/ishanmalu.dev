@@ -507,8 +507,8 @@
       if (Math.abs(sPos - Math.round(sPos)) < .01) anchor = Math.round(sPos);
       const idx = stopFor(sPos);
       if (scrollY < pinStart()) {
-        // before the list pins, the line grows from the top toward the first checkpoint
-        const pre = Math.min(1, Math.max(0, (scrollY - pinStart() + vh * .35) / (vh * .35)));
+        // from the moment the list slides into view, the line grows from the top toward the first checkpoint
+        const pre = Math.min(1, Math.max(0, (scrollY - pinStart() + vh * .8) / (vh * .8)));
         qTarget = stops[0] * ease(pre);
         mode = FOLLOW;
       } else {

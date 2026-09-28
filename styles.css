@@ -138,7 +138,8 @@ h1 {
   translate: 0 -50%;
   background: var(--hl);
   box-shadow: 0 0 14px 2px var(--hl);
-  opacity: min(1, calc(var(--p) * 20));
+  /* softly visible from the start, full glow once the line is moving */
+  opacity: min(1, calc(.45 + var(--p) * 20));
 }
 .rows li { position: relative; }
 .rows li::before {
