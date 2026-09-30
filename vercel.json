@@ -8,6 +8,16 @@
       "source": "/index",
       "destination": "/",
       "permanent": true
+    },
+    {
+      "source": "/transcriber",
+      "destination": "/clipmine",
+      "permanent": true
+    },
+    {
+      "source": "/hookmine",
+      "destination": "/clipmine",
+      "permanent": true
     }
   ],
   "headers": [

@@ -67,20 +67,17 @@
       x.globalAlpha = o; x.fillStyle = '#1b2a26'; x.fillRect(w * .56, h * .13, w * .36, h * .5 * o);
       x.strokeStyle = c; x.strokeRect(w * .56, h * .13, w * .36, h * .5 * o);
     },
-    transcriber(x, w, h, t, c) {
-      x.fillStyle = '#1a120c'; x.fillRect(0, 0, w, h); x.fillStyle = c;
-      const n = 56, bw = w / n;
+    clipmine(x, w, h, t, c) {
+      x.fillStyle = '#1a120c'; x.fillRect(0, 0, w, h); x.fillStyle = c; x.strokeStyle = c; x.lineWidth = 2;
+      const n = 40, bw = w / n;
       for (let i = 0; i < n; i++) {
-        const a = noise(i * .25, t * 1.6) * h * .6 + 3;
-        x.globalAlpha = .35 + .65 * (i / n); x.fillRect(i * bw + 1, h / 2 - a / 2, bw - 2.5, a);
-      }
-    },
-    hookmine(x, w, h, t, c) {
-      x.fillStyle = '#1a0e12'; x.fillRect(0, 0, w, h); x.strokeStyle = c; x.lineWidth = 2;
-      for (let i = 0; i < 9; i++) {
-        const px = w * (.1 + i * .1), v = noise(i * 1.3, t * .5), py = h * .85 - v * h * .65;
-        x.globalAlpha = .35 + v * .65;
-        x.beginPath(); x.moveTo(px, h * .88); x.lineTo(px, py); x.arc(px + 7, py, 7, Math.PI, 0, false); x.stroke();
+        const v = noise(i * .25, t * 1.6), a = v * h * .6 + 3, px = i * bw + bw / 2;
+        x.globalAlpha = .35 + .65 * (i / n);
+        if (v > .72) {
+          const top = h / 2 - a / 2;
+          x.beginPath(); x.moveTo(px, h / 2 + a / 2); x.lineTo(px, top);
+          x.arc(px + 5, top, 5, Math.PI, 0, false); x.stroke();
+        } else x.fillRect(i * bw + 1, h / 2 - a / 2, bw - 2.5, a);
       }
     },
     prompter(x, w, h, t, c) {
