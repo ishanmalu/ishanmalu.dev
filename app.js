@@ -22,6 +22,8 @@
   }
 
   // ---------- per-project animations ----------
+  const QR = 'jtyf3,a5xdt,ek4m5,ejckd,ejeql,a5v0h,jvfy7,1nnk,ioyx0,ifz5t,41avr,d9ede,13vu3,9ecsp,dwt47,86tg2,c5at4,2fiz,jv9zv,a74m2,ekum3,ej324,ejzf5,a75ui,jv2w3'
+    .split(',').map(r => parseInt(r, 36).toString(2).padStart(25, '0'));
   const G = {
     tapli(x, w, h, t, c) {
       x.fillStyle = '#0d1716'; x.fillRect(0, 0, w, h);
@@ -30,15 +32,12 @@
       const ty = h * .62;
       x.fillStyle = '#1c2a28'; x.beginPath(); x.ellipse(w * .32, ty, w * .26, h * .14, 0, 0, 7); x.fill();
       x.strokeStyle = c; x.globalAlpha = .35; x.lineWidth = 1.2; x.stroke(); x.globalAlpha = 1;
-      const q = Math.min(w, h) * .26, qx = w * .32 - q / 2, qy = ty - q * 1.02;
-      x.fillStyle = '#f3f1ec'; rr(qx - 5, qy - 5, q + 10, q + 10, 4); x.fill();
-      const n = 9, cs = q / n; x.fillStyle = '#0d1716';
-      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-        const fin = (a, b) => i >= a && i < a + 3 && j >= b && j < b + 3;
-        const corner = fin(0, 0) || fin(6, 0) || fin(0, 6);
-        const on = corner ? !(i % 6 === 1 && j % 6 === 1) : hs(i * 7 + 3, j * 5 + 1) > .5;
-        if (on) x.fillRect(qx + i * cs, qy + j * cs, cs + .3, cs + .3);
-      }
+      const q = Math.min(w, h) * .36, qx = w * .32 - q / 2, qy = ty - q * .95;
+      { const m = q / 12; x.fillStyle = '#f3f1ec'; rr(qx - m, qy - m, q + 2 * m, q + 2 * m, 4); x.fill(); }
+      // a real, scannable code for https://tapliapp.com (rows packed in base 36)
+      const n = QR.length, cs = q / n; x.fillStyle = '#0d1716';
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++)
+        if (QR[j][i] === '1') x.fillRect(qx + i * cs, qy + j * cs, cs + .3, cs + .3);
       // scan line over the QR
       const sp = (t * .6) % 1;
       x.fillStyle = c; x.globalAlpha = .7 * (1 - sp); x.fillRect(qx - 4, qy + sp * q, q + 8, 2); x.globalAlpha = 1;
