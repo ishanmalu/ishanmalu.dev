@@ -23,6 +23,50 @@
 
   // ---------- per-project animations ----------
   const G = {
+    tapli(x, w, h, t, c) {
+      x.fillStyle = '#0d1716'; x.fillRect(0, 0, w, h);
+      const rr = (X, Y, W, H, R) => { x.beginPath(); x.roundRect(X, Y, W, H, R); };
+      // table top with a QR tent card
+      const ty = h * .62;
+      x.fillStyle = '#1c2a28'; x.beginPath(); x.ellipse(w * .32, ty, w * .26, h * .14, 0, 0, 7); x.fill();
+      x.strokeStyle = c; x.globalAlpha = .35; x.lineWidth = 1.2; x.stroke(); x.globalAlpha = 1;
+      const q = Math.min(w, h) * .26, qx = w * .32 - q / 2, qy = ty - q * 1.02;
+      x.fillStyle = '#f3f1ec'; rr(qx - 5, qy - 5, q + 10, q + 10, 4); x.fill();
+      const n = 9, cs = q / n; x.fillStyle = '#0d1716';
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        const fin = (a, b) => i >= a && i < a + 3 && j >= b && j < b + 3;
+        const corner = fin(0, 0) || fin(6, 0) || fin(0, 6);
+        const on = corner ? !(i % 6 === 1 && j % 6 === 1) : hs(i * 7 + 3, j * 5 + 1) > .5;
+        if (on) x.fillRect(qx + i * cs, qy + j * cs, cs + .3, cs + .3);
+      }
+      // scan line over the QR
+      const sp = (t * .6) % 1;
+      x.fillStyle = c; x.globalAlpha = .7 * (1 - sp); x.fillRect(qx - 4, qy + sp * q, q + 8, 2); x.globalAlpha = 1;
+      // phone with an "order ready" screen
+      const ph = h * .72, pw = ph * .5, px = w * .7 - pw / 2, py = h * .14 + Math.sin(t * 1.2) * 4;
+      x.fillStyle = '#05090a'; rr(px, py, pw, ph, pw * .16); x.fill();
+      x.strokeStyle = '#ffffff22'; x.lineWidth = 1; x.stroke();
+      x.fillStyle = '#121d1c'; rr(px + 5, py + 5, pw - 10, ph - 10, pw * .13); x.fill();
+      x.fillStyle = '#05090a'; rr(px + pw * .38, py + 9, pw * .24, 5, 3); x.fill();
+      const ready = (t * .3) % 1 > .35, pulse = .5 + .5 * Math.sin(t * 4);
+      const cx = px + pw / 2, cy = py + ph * .42, R = pw * .26;
+      if (ready) {
+        x.fillStyle = '#3ddc84'; x.globalAlpha = .25 + .2 * pulse;
+        x.beginPath(); x.arc(cx, cy, R * (1.25 + .1 * pulse), 0, 7); x.fill(); x.globalAlpha = 1;
+        x.beginPath(); x.arc(cx, cy, R, 0, 7); x.fill();
+        x.strokeStyle = '#05140c'; x.lineWidth = R * .2; x.lineCap = 'round'; x.lineJoin = 'round';
+        x.beginPath(); x.moveTo(cx - R * .42, cy + R * .02); x.lineTo(cx - R * .1, cy + R * .34); x.lineTo(cx + R * .45, cy - R * .3); x.stroke();
+        x.fillStyle = '#3ddc84'; x.font = `600 ${Math.round(pw * .11)}px system-ui, sans-serif`; x.textAlign = 'center';
+        x.fillText('Order ready', cx, py + ph * .72);
+      } else {
+        x.strokeStyle = c; x.lineWidth = 3; x.lineCap = 'round';
+        x.beginPath(); x.arc(cx, cy, R * .7, t * 5, t * 5 + 4.2); x.stroke();
+        x.fillStyle = '#ffffff55'; x.font = `500 ${Math.round(pw * .1)}px system-ui, sans-serif`; x.textAlign = 'center';
+        x.fillText('Preparing…', cx, py + ph * .72);
+      }
+      x.fillStyle = '#ffffff1a';
+      for (let i = 0; i < 2; i++) { rr(px + pw * .18, py + ph * (.8 + i * .07), pw * (.64 - i * .2), 4, 2); x.fill(); }
+    },
     seedscape(x, w, h, t, c) {
       const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0f1a12'); g.addColorStop(1, '#1d2f1c');
       x.fillStyle = g; x.fillRect(0, 0, w, h); x.strokeStyle = c; x.lineWidth = 1.2;
