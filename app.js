@@ -103,15 +103,73 @@
     },
     bridge(x, w, h, t, c) {
       x.fillStyle = '#17110e'; x.fillRect(0, 0, w, h);
-      const sw = w * .34, sh = h * .5, sy = h * .22, lx = w * .1, rx = w * .56;
-      x.lineWidth = 3; x.lineJoin = 'round';
-      const k = (Math.sin(t * .9) + 1) / 2, cx = lx + sw * .25 + k * (rx + sw * .75 - lx - sw * .25), cy = sy + sh * (.55 - .2 * Math.sin(k * Math.PI));
-      [lx, rx].forEach((sx, i) => {
-        const lit = Math.abs(cx - (i ? rx : lx + sw)) < w * .04;
-        x.strokeStyle = lit ? c : '#f1ede4'; x.globalAlpha = lit ? 1 : .55;
-        x.beginPath(); x.roundRect(sx, sy, sw, sh, 10); x.stroke();
-      });
-      x.globalAlpha = 1; x.save(); x.translate(cx, cy); x.scale(h / 260, h / 260);
+      const ink = '#f1ede4', P = 9, T = (t % P) / P;
+      const ease = (k) => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      // Devices: a laptop on the left, a monitor on the right.
+      const sw = w * .32, sh = sw * .62, base = h * .74;
+      const L = { x: w * .08, y: base - sh, w: sw, h: sh }, R = { x: w * .58, y: base - sh - h * .1, w: sw * 1.08, h: sh * 1.08 };
+      const onPc = T > .22 && T < .72, hit = (a, b) => T > a && T < b;
+      const screen = (r, lit) => {
+        x.fillStyle = '#211a16'; x.strokeStyle = lit ? c : ink; x.globalAlpha = lit ? 1 : .6; x.lineWidth = 2.5;
+        x.beginPath(); x.roundRect(r.x, r.y, r.w, r.h, 8); x.fill(); x.stroke();
+        x.globalAlpha = .18; x.fillStyle = ink;
+        x.beginPath(); x.roundRect(r.x + r.w * .1, r.y + r.h * .2, r.w * .5, r.h * .45, 4); x.fill();
+        x.beginPath(); x.roundRect(r.x + r.w * .45, r.y + r.h * .38, r.w * .4, r.h * .4, 4); x.fill();
+        x.globalAlpha = 1;
+      };
+      screen(L, !onPc && hit(.12, .24)); screen(R, onPc);
+      x.fillStyle = ink; x.globalAlpha = .6;
+      x.beginPath(); x.roundRect(L.x - L.w * .07, base + 2, L.w * 1.14, 6, 3); x.fill();
+      x.fillRect(R.x + R.w * .46, R.y + R.h, R.w * .08, h * .07);
+      x.beginPath(); x.roundRect(R.x + R.w * .32, R.y + R.h + h * .07, R.w * .36, 4, 2); x.fill();
+      x.globalAlpha = 1;
+      // Pointer path: wander on the Mac, cross, wander on the PC, cross back.
+      const mL = { x: L.x + L.w * .3, y: L.y + L.h * .35 }, eL = { x: L.x + L.w - 4, y: L.y + L.h * .55 };
+      const eR = { x: R.x + 4, y: R.y + R.h * .55 }, mR = { x: R.x + R.w * .55, y: R.y + R.h * .35 };
+      const seg = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
+      let p;
+      if (T < .2) p = seg(mL, eL, ease(T / .2));
+      else if (T < .26) { const k = (T - .2) / .06; p = seg(eL, eR, k); p.y -= Math.sin(k * Math.PI) * h * .12; }
+      else if (T < .45) p = seg(eR, mR, ease((T - .26) / .19));
+      else if (T < .66) p = { x: mR.x + Math.sin(T * 40) * 2, y: mR.y };
+      else if (T < .72) p = seg(mR, eR, ease((T - .66) / .06));
+      else if (T < .78) { const k = (T - .72) / .06; p = seg(eR, eL, k); p.y -= Math.sin(k * Math.PI) * h * .12; }
+      else p = seg(eL, mL, ease((T - .78) / .22));
+      // Trail while crossing.
+      if (hit(.18, .3) || hit(.7, .82)) {
+        for (let i = 1; i < 12; i++) {
+          const q = Math.max(0, T - i * .004);
+          const k = T > .5 ? (q - .72) / .06 : (q - .2) / .06;
+          if (k < 0 || k > 1) continue;
+          const a = T > .5 ? eR : eL, b = T > .5 ? eL : eR, tp = seg(a, b, k);
+          tp.y -= Math.sin(k * Math.PI) * h * .12;
+          x.globalAlpha = .5 * (1 - i / 12); x.fillStyle = c;
+          x.beginPath(); x.arc(tp.x, tp.y, 4 - i * .25, 0, 7); x.fill();
+        }
+        x.globalAlpha = 1;
+      }
+      // Arrival ring.
+      const ring = T > .26 && T < .34 ? (T - .26) / .08 : T > .78 && T < .86 ? (T - .78) / .08 : -1;
+      if (ring >= 0) {
+        const at = T < .5 ? eR : eL;
+        x.strokeStyle = c; x.lineWidth = 2; x.globalAlpha = 1 - ring;
+        x.beginPath(); x.arc(at.x, at.y, 6 + ring * 26, 0, 7); x.stroke(); x.globalAlpha = 1;
+      }
+      // Clipboard chip rides along after the crossing; then the ⌘C → Ctrl C chip.
+      const chip = (label, a, dy) => {
+        if (a <= 0) return;
+        x.font = `500 ${Math.max(10, h * .045)}px system-ui, sans-serif`;
+        const tw = x.measureText(label).width + 16, ch = h * .085;
+        x.globalAlpha = a; x.fillStyle = ink;
+        x.beginPath(); x.roundRect(p.x + 16, p.y + dy, tw, ch, 6); x.fill();
+        x.fillStyle = '#17110e'; x.textBaseline = 'middle'; x.fillText(label, p.x + 24, p.y + dy + ch / 2);
+        x.globalAlpha = 1;
+      };
+      const fade = (a, b) => Math.max(0, Math.min(1, (T - a) * 40, (b - T) * 40));
+      chip('copied text', fade(.27, .45), 22);
+      chip('⌘C  →  Ctrl+C', fade(.48, .64), 22);
+      // The pointer.
+      x.save(); x.translate(p.x, p.y); x.scale(h / 240, h / 240);
       x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 26); x.lineTo(7, 20); x.lineTo(12, 31); x.lineTo(17, 29); x.lineTo(12, 18); x.lineTo(21, 18); x.closePath();
       x.fillStyle = c; x.fill(); x.strokeStyle = '#17110e'; x.lineWidth = 2; x.stroke(); x.restore();
     },
