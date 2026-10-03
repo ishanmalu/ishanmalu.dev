@@ -106,18 +106,63 @@
       const ink = '#f1ede4', P = 9, T = (t % P) / P;
       const ease = (k) => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
       // Devices: a laptop on the left, a monitor on the right.
-      const sw = w * .32, sh = sw * .62, base = h * .74;
-      const L = { x: w * .08, y: base - sh, w: sw, h: sh }, R = { x: w * .58, y: base - sh - h * .1, w: sw * 1.08, h: sh * 1.08 };
+      const sw = w * .36, sh = sw * .62, base = h * .76;
+      const L = { x: w * .05, y: base - sh, w: sw, h: sh }, R = { x: w * .58, y: base - sh - h * .1, w: sw * 1.08, h: sh * 1.08 };
       const onPc = T > .22 && T < .72, hit = (a, b) => T > a && T < b;
-      const screen = (r, lit) => {
-        x.fillStyle = '#211a16'; x.strokeStyle = lit ? c : ink; x.globalAlpha = lit ? 1 : .6; x.lineWidth = 2.5;
-        x.beginPath(); x.roundRect(r.x, r.y, r.w, r.h, 8); x.fill(); x.stroke();
-        x.globalAlpha = .18; x.fillStyle = ink;
-        x.beginPath(); x.roundRect(r.x + r.w * .1, r.y + r.h * .2, r.w * .5, r.h * .45, 4); x.fill();
-        x.beginPath(); x.roundRect(r.x + r.w * .45, r.y + r.h * .38, r.w * .4, r.h * .4, 4); x.fill();
-        x.globalAlpha = 1;
+      const frame = (r, lit) => {
+        x.strokeStyle = lit ? c : ink; x.globalAlpha = lit ? 1 : .7; x.lineWidth = 2.5;
+        x.beginPath(); x.roundRect(r.x, r.y, r.w, r.h, 8); x.stroke(); x.globalAlpha = 1;
       };
-      screen(L, !onPc && hit(.12, .24)); screen(R, onPc);
+      const clipTo = (r) => { x.save(); x.beginPath(); x.roundRect(r.x + 1.5, r.y + 1.5, r.w - 3, r.h - 3, 7); x.clip(); };
+      // macOS: soft dusk wallpaper, translucent menu bar, a window, and a dock.
+      const mac = (r, lit) => {
+        clipTo(r);
+        const g = x.createLinearGradient(r.x, r.y, r.x + r.w, r.y + r.h);
+        g.addColorStop(0, '#3b2f6b'); g.addColorStop(.55, '#b0567a'); g.addColorStop(1, '#f2a65a');
+        x.fillStyle = g; x.fillRect(r.x, r.y, r.w, r.h);
+        const mb = r.h * .08;
+        x.fillStyle = '#ffffff33'; x.fillRect(r.x, r.y, r.w, mb);
+        x.fillStyle = '#fff'; x.globalAlpha = .9;
+        x.beginPath(); x.arc(r.x + r.w * .05, r.y + mb / 2, mb * .22, 0, 7); x.fill();
+        for (let i = 0; i < 3; i++) { x.fillRect(r.x + r.w * (.1 + i * .08), r.y + mb * .38, r.w * .05, mb * .24); }
+        x.fillRect(r.x + r.w * .8, r.y + mb * .38, r.w * .12, mb * .24);
+        x.globalAlpha = 1;
+        const wx = r.x + r.w * .14, wy = r.y + r.h * .2, ww = r.w * .56, wh = r.h * .48;
+        x.fillStyle = '#f5f3ef'; x.beginPath(); x.roundRect(wx, wy, ww, wh, 5); x.fill();
+        ['#ff5f57', '#febc2e', '#28c840'].forEach((col, i) => { x.fillStyle = col; x.beginPath(); x.arc(wx + 7 + i * 7, wy + 6, 2.2, 0, 7); x.fill(); });
+        x.fillStyle = '#d9d4cb'; for (let i = 0; i < 3; i++) x.fillRect(wx + ww * .1, wy + wh * (.35 + i * .18), ww * (.7 - i * .15), wh * .07);
+        const dw = r.w * .56, dh = r.h * .11, dx = r.x + (r.w - dw) / 2, dy = r.y + r.h - dh - r.h * .04;
+        x.fillStyle = '#ffffff40'; x.beginPath(); x.roundRect(dx, dy, dw, dh, dh * .35); x.fill();
+        ['#4aa3ff', '#34c759', '#ff9f0a', '#ff375f', '#bf5af2', '#e5e5ea'].forEach((col, i) => {
+          const s = dh * .7; x.fillStyle = col; x.beginPath(); x.roundRect(dx + dw * .06 + i * (dw * .88 / 6) + (dw * .88 / 6 - s) / 2, dy + (dh - s) / 2, s, s, s * .25); x.fill();
+        });
+        x.restore(); frame(r, lit);
+      };
+      // Windows: blue bloom wallpaper with the logo, a window, and a centred taskbar.
+      const win = (r, lit) => {
+        clipTo(r);
+        const g = x.createRadialGradient(r.x + r.w * .5, r.y + r.h * .45, 2, r.x + r.w * .5, r.y + r.h * .45, r.w * .7);
+        g.addColorStop(0, '#5fb4ff'); g.addColorStop(.45, '#1f5fd6'); g.addColorStop(1, '#0a1f5c');
+        x.fillStyle = g; x.fillRect(r.x, r.y, r.w, r.h);
+        const ls = r.h * .09, lx = r.x + r.w * .74, ly = r.y + r.h * .16;
+        x.fillStyle = '#ffffffb0';
+        for (let i = 0; i < 4; i++) x.fillRect(lx + (i % 2) * ls * 1.08, ly + Math.floor(i / 2) * ls * 1.08, ls, ls);
+        const wx = r.x + r.w * .08, wy = r.y + r.h * .14, ww = r.w * .52, wh = r.h * .52;
+        x.fillStyle = '#f3f3f3'; x.fillRect(wx, wy, ww, wh);
+        x.fillStyle = '#e1e1e1'; x.fillRect(wx, wy, ww, wh * .12);
+        x.fillStyle = '#666'; ['', '', ''].forEach((_, i) => x.fillRect(wx + ww - 8 - i * 9, wy + wh * .05, 5, 1.5));
+        x.fillStyle = '#d0d0d0'; for (let i = 0; i < 3; i++) x.fillRect(wx + ww * .08, wy + wh * (.3 + i * .18), ww * (.75 - i * .15), wh * .07);
+        const th = r.h * .1;
+        x.fillStyle = '#1b1e2bee'; x.fillRect(r.x, r.y + r.h - th, r.w, th);
+        const s = th * .55, n = 6, gap = s * .55, sx = r.x + r.w / 2 - (n * s + (n - 1) * gap) / 2, sy = r.y + r.h - th + (th - s) / 2;
+        for (let i = 0; i < n; i++) {
+          const ix = sx + i * (s + gap);
+          if (i === 0) { const q = s * .46; x.fillStyle = '#4cc2ff'; for (let k = 0; k < 4; k++) x.fillRect(ix + (k % 2) * (q + s * .08), sy + Math.floor(k / 2) * (q + s * .08), q, q); }
+          else { x.fillStyle = ['#ffd04a', '#4aa3ff', '#ff6b6b', '#34c759', '#c7c7cc'][i - 1]; x.beginPath(); x.roundRect(ix, sy, s, s, 2); x.fill(); }
+        }
+        x.restore(); frame(r, lit);
+      };
+      mac(L, !onPc && hit(.12, .24)); win(R, onPc);
       x.fillStyle = ink; x.globalAlpha = .6;
       x.beginPath(); x.roundRect(L.x - L.w * .07, base + 2, L.w * 1.14, 6, 3); x.fill();
       x.fillRect(R.x + R.w * .46, R.y + R.h, R.w * .08, h * .07);
@@ -125,7 +170,7 @@
       x.globalAlpha = 1;
       // Pointer path: wander on the Mac, cross, wander on the PC, cross back.
       const mL = { x: L.x + L.w * .3, y: L.y + L.h * .35 }, eL = { x: L.x + L.w - 4, y: L.y + L.h * .55 };
-      const eR = { x: R.x + 4, y: R.y + R.h * .55 }, mR = { x: R.x + R.w * .55, y: R.y + R.h * .35 };
+      const eR = { x: R.x + 4, y: R.y + R.h * .55 }, mR = { x: R.x + R.w * .48, y: R.y + R.h * .22 };
       const seg = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
       let p;
       if (T < .2) p = seg(mL, eL, ease(T / .2));
@@ -156,18 +201,24 @@
         x.beginPath(); x.arc(at.x, at.y, 6 + ring * 26, 0, 7); x.stroke(); x.globalAlpha = 1;
       }
       // Clipboard chip rides along after the crossing; then the ⌘C → Ctrl C chip.
-      const chip = (label, a, dy) => {
+      const chip = (label, a) => {
         if (a <= 0) return;
-        x.font = `500 ${Math.max(10, h * .045)}px system-ui, sans-serif`;
-        const tw = x.measureText(label).width + 16, ch = h * .085;
-        x.globalAlpha = a; x.fillStyle = ink;
-        x.beginPath(); x.roundRect(p.x + 16, p.y + dy, tw, ch, 6); x.fill();
-        x.fillStyle = '#17110e'; x.textBaseline = 'middle'; x.fillText(label, p.x + 24, p.y + dy + ch / 2);
+        const pad = 6;
+        let fs = Math.max(8, h * .045);
+        x.font = `500 ${fs}px system-ui, sans-serif`;
+        while (x.measureText(label).width + 16 > R.w - pad * 2 && fs > 6) { fs -= .5; x.font = `500 ${fs}px system-ui, sans-serif`; }
+        const tw = x.measureText(label).width + 16, ch = fs * 1.9;
+        // Centred low on the PC's screen, just above the taskbar and clear of the pointer.
+        const cx = R.x + (R.w - tw) / 2;
+        const cy = R.y + R.h * .9 - ch - pad;
+        x.globalAlpha = a; x.fillStyle = '#17110e';
+        x.beginPath(); x.roundRect(cx, cy, tw, ch, 6); x.fill();
+        x.fillStyle = ink; x.textBaseline = 'middle'; x.fillText(label, cx + 8, cy + ch / 2);
         x.globalAlpha = 1;
       };
       const fade = (a, b) => Math.max(0, Math.min(1, (T - a) * 40, (b - T) * 40));
-      chip('copied text', fade(.27, .45), 22);
-      chip('⌘C  →  Ctrl+C', fade(.48, .64), 22);
+      chip('copied text', fade(.27, .45));
+      chip('⌘C  →  Ctrl+C', fade(.48, .64));
       // The pointer.
       x.save(); x.translate(p.x, p.y); x.scale(h / 240, h / 240);
       x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 26); x.lineTo(7, 20); x.lineTo(12, 31); x.lineTo(17, 29); x.lineTo(12, 18); x.lineTo(21, 18); x.closePath();
