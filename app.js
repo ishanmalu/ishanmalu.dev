@@ -101,6 +101,20 @@
         x.strokeStyle = col; x.stroke();
       });
     },
+    bridge(x, w, h, t, c) {
+      x.fillStyle = '#17110e'; x.fillRect(0, 0, w, h);
+      const sw = w * .34, sh = h * .5, sy = h * .22, lx = w * .1, rx = w * .56;
+      x.lineWidth = 3; x.lineJoin = 'round';
+      const k = (Math.sin(t * .9) + 1) / 2, cx = lx + sw * .25 + k * (rx + sw * .75 - lx - sw * .25), cy = sy + sh * (.55 - .2 * Math.sin(k * Math.PI));
+      [lx, rx].forEach((sx, i) => {
+        const lit = Math.abs(cx - (i ? rx : lx + sw)) < w * .04;
+        x.strokeStyle = lit ? c : '#f1ede4'; x.globalAlpha = lit ? 1 : .55;
+        x.beginPath(); x.roundRect(sx, sy, sw, sh, 10); x.stroke();
+      });
+      x.globalAlpha = 1; x.save(); x.translate(cx, cy); x.scale(h / 260, h / 260);
+      x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 26); x.lineTo(7, 20); x.lineTo(12, 31); x.lineTo(17, 29); x.lineTo(12, 18); x.lineTo(21, 18); x.closePath();
+      x.fillStyle = c; x.fill(); x.strokeStyle = '#17110e'; x.lineWidth = 2; x.stroke(); x.restore();
+    },
     perch(x, w, h, t, c) {
       x.fillStyle = '#0e1614'; x.fillRect(0, 0, w, h);
       x.fillStyle = '#ffffff14'; x.fillRect(0, 0, w, h * .1);
