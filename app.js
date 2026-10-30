@@ -90,6 +90,68 @@
       x.restore(); x.globalAlpha = 1; x.fillStyle = c;
       x.beginPath(); x.arc(w / 2, h / 2, R * .42, 0, 7); x.fill();
     },
+    kulku(x, w, h, t, c) {
+      x.fillStyle = '#0e0d0b'; x.fillRect(0, 0, w, h);
+      // a route with a bus gliding along it
+      const pt = k => ({ x: w * (.06 + .88 * k), y: h * (.78 - .5 * k) + Math.sin(k * 7) * h * .06 });
+      x.strokeStyle = '#ffffff1f'; x.lineWidth = 6; x.lineCap = 'round';
+      x.beginPath(); for (let i = 0; i <= 60; i++) { const p = pt(i / 60); i ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y); } x.stroke();
+      const b = pt((t * .08) % 1);
+      x.fillStyle = c; x.globalAlpha = .2; x.beginPath(); x.arc(b.x, b.y, 14, 0, 7); x.fill();
+      x.globalAlpha = 1; x.beginPath(); x.arc(b.x, b.y, 6, 0, 7); x.fill();
+      // the leave-by ring
+      const R = Math.min(w, h) * .2, cx = w * .3, cy = h * .34, k = 1 - (t * .1) % 1;
+      x.lineWidth = R * .16; x.strokeStyle = '#ffffff14'; x.beginPath(); x.arc(cx, cy, R, 0, 7); x.stroke();
+      x.strokeStyle = c; x.beginPath(); x.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); x.stroke();
+      const s = Math.ceil(k * 300);
+      x.fillStyle = '#f5f3ee'; x.font = `600 ${Math.round(R * .5)}px system-ui, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(`${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`, cx, cy);
+    },
+    brew(x, w, h, t, c) {
+      const g = x.createRadialGradient(w / 2, 0, 4, w / 2, 0, h * 1.1); g.addColorStop(0, '#2a1b10'); g.addColorStop(1, '#120c08');
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+      // cup filling, then a fresh one
+      const P = 6, k = Math.min(1, (t % P) / (P * .75)), cw = w * .26, ch = h * .3, cx = w / 2 - cw / 2, cy = h * .5;
+      x.fillStyle = c; x.globalAlpha = .9;
+      if (k < 1) x.fillRect(w / 2 - 1.5, h * .16, 3, cy + ch - h * .16 - ch * k);
+      x.save(); x.beginPath(); x.roundRect(cx, cy, cw, ch, [0, 0, cw * .4, cw * .4]); x.clip();
+      const fg = x.createLinearGradient(0, cy, 0, cy + ch); fg.addColorStop(0, '#c58a52'); fg.addColorStop(1, '#5a3317');
+      x.fillStyle = fg; x.globalAlpha = 1; x.fillRect(cx, cy + ch * (1 - k), cw, ch * k); x.restore();
+      x.strokeStyle = '#f4ede4cc'; x.lineWidth = 2.5;
+      x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx, cy + ch - cw * .4); x.arcTo(cx, cy + ch, cx + cw * .4, cy + ch, cw * .4);
+      x.lineTo(cx + cw - cw * .4, cy + ch); x.arcTo(cx + cw, cy + ch, cx + cw, cy + ch - cw * .4, cw * .4); x.lineTo(cx + cw, cy); x.stroke();
+      x.beginPath(); x.arc(cx + cw + 4, cy + ch * .38, ch * .2, -Math.PI / 2, Math.PI / 2); x.stroke();
+      x.fillStyle = '#f4ede4'; x.font = `300 ${Math.round(h * .1)}px system-ui, sans-serif`; x.textAlign = 'center';
+      x.fillText((k * 28).toFixed(1) + 's', w / 2, h * .92);
+    },
+    dash(x, w, h, t, c) {
+      x.fillStyle = '#000'; x.fillRect(0, 0, w, h);
+      const g = x.createRadialGradient(w * .2, 0, 4, w * .2, 0, w * .8); g.addColorStop(0, '#16202c'); g.addColorStop(1, '#0000');
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+      const m = w * .05, gw = (w - m * 4) / 3, top = h * .3, gh = (h - top - m * 2) / 2;
+      const tile = (i, j, cw, chh) => {
+        const X = m + i * (gw + m), Y = top + j * (gh + m), W = gw * cw + m * (cw - 1), H = gh * chh + m * (chh - 1);
+        x.fillStyle = '#ffffff10'; x.strokeStyle = '#ffffff22'; x.lineWidth = 1;
+        x.beginPath(); x.roundRect(X, Y, W, H, 10); x.fill(); x.stroke();
+        return { X, Y, W, H };
+      };
+      x.fillStyle = '#f5f5f7'; x.font = `600 ${Math.round(h * .09)}px system-ui, sans-serif`; x.textBaseline = 'alphabetic';
+      x.fillText('Good morning.', m, h * .2);
+      // the brief writes itself line by line
+      const b = tile(0, 0, 1, 2), lines = Math.floor((t * 1.5) % 8);
+      x.fillStyle = '#ffffff40';
+      for (let i = 0; i < Math.min(lines, 6); i++) x.fillRect(b.X + 10, b.Y + 14 + i * 12, (b.W - 20) * (i % 3 === 2 ? .6 : .9), 4);
+      const wx = tile(1, 0, 1, 1); x.fillStyle = '#f5f5f7'; x.font = `500 ${Math.round(gh * .34)}px system-ui, sans-serif`; x.fillText('−2°', wx.X + 10, wx.Y + gh * .62);
+      const s = tile(2, 0, 1, 1); x.strokeStyle = c; x.lineWidth = 2; x.beginPath();
+      for (let i = 0; i <= 20; i++) { const px = s.X + 8 + i / 20 * (s.W - 16), py = s.Y + s.H * .7 - (noise(i * .3, t * .4) - .3) * s.H * .5; i ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke();
+      // electricity price bars, the current hour lit
+      const e = tile(1, 1, 2, 1), n = 16;
+      for (let i = 0; i < n; i++) {
+        const v = .25 + .6 * noise(i * .5, 2), bw = (e.W - 20) / n;
+        x.fillStyle = i === Math.floor(t) % n ? c : '#ffffff30';
+        x.fillRect(e.X + 10 + i * bw, e.Y + e.H - 8 - v * (e.H - 18), bw - 3, v * (e.H - 18));
+      }
+    },
     cadence(x, w, h, t) {
       x.fillStyle = '#130f1b'; x.fillRect(0, 0, w, h); x.lineWidth = 2; x.globalAlpha = .85;
       ['#c9a7ff', '#9fe8cf', '#ffb38a'].forEach((col, k) => {

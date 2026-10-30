@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kulku · Live transit for Turku, Tampere and Helsinki</title>
+<meta name="description" content="Live departures, a leave-by countdown, a 3D live map and a trip planner for Turku, Tampere and Helsinki. Free, in your browser, installable.">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="Kulku · Live transit">
+<meta property="og:description" content="Know exactly when to leave. Live buses, trams and metro for Turku, Tampere and Helsinki.">
+<meta property="og:url" content="https://ishanmalu.dev/intro/kulku">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://ishanmalu.dev/og.png">
+<link rel="canonical" href="https://ishanmalu.dev/intro/kulku">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="/intro/intro.css">
+<script src="/intro/intro.js"></script>
+</head>
+<body class="kulku">
+<nav class="nav">
+  <a class="back" href="/">‹ Side quests</a>
+  <span class="nm">Kulku</span>
+  <a class="pill" href="https://kulku.ishanmalu.dev">Open</a>
+</nav>
+
+<main>
+  <header class="hero wrap">
+    <p class="eyebrow rv">Kulku</p>
+    <h1 class="rv" data-css="--d:.08s">Know exactly<br><span class="grad">when to leave.</span></h1>
+    <p class="lede rv" data-css="--d:.16s">Live buses, trams and metro for <b>Turku, Tampere and Helsinki</b>. One ring tells you how long until you have to walk out the door.</p>
+    <div class="cta rv" data-css="--d:.24s">
+      <a class="pill lg" href="https://kulku.ishanmalu.dev">Open Kulku</a>
+      <a class="link" href="#how">See how it works</a>
+    </div>
+    <div class="stage rv" data-css="--d:.3s">
+      <div class="phone"><div class="scr"><div class="k-app">
+        <div class="hd"><b>Kotkankatu</b><span>2 min walk</span></div>
+        <div class="ring" data-countdown="300">
+          <svg viewBox="0 0 172 172"><circle class="bgc" cx="86" cy="86" r="75"/><circle class="fg" cx="86" cy="86" r="75"/></svg>
+          <div class="in-r"><small>Leave in</small><b>4:23</b></div>
+        </div>
+        <div class="dep"><span class="ln">3</span><span class="to">Perno<small>Kupittaa · platform A</small></span><span class="m live">6 min</span></div>
+        <div class="dep"><span class="ln b">32</span><span class="to">Varissuo<small>Kauppatori</small></span><span class="m live">11 min</span></div>
+        <div class="dep"><span class="ln c">1</span><span class="to">Satama<small>Lentoasema</small></span><span class="m">14:52</span></div>
+        <div class="tabs"><span class="on">Now</span><span>Map</span><span>Go</span></div>
+      </div></div></div>
+    </div>
+  </header>
+
+  <section class="wrap">
+    <div class="stats rv" data-stagger>
+      <div><b>3</b><span>cities, one app: Föli, Nysse and HSL</span></div>
+      <div><b>Live</b><span>every vehicle, straight from the GPS feed</span></div>
+      <div><b>0 €</b><span>no account, no ads, nothing to install</span></div>
+    </div>
+  </section>
+
+  <section class="wrap" id="how">
+    <div class="split">
+      <div class="rv">
+        <p class="eyebrow">The leave-by ring</p>
+        <h2>Not when it comes. When you go.</h2>
+        <p>Timetables tell you when the bus arrives. Kulku <b>subtracts the walk</b> from where you are, so the ring counts down to the moment you should stand up. When it closes, go.</p>
+      </div>
+      <div class="panel rv" data-css="--d:.1s">
+        <div class="ring" data-countdown="180">
+          <svg viewBox="0 0 172 172"><circle class="bgc" cx="86" cy="86" r="75"/><circle class="fg" cx="86" cy="86" r="75"/></svg>
+          <div class="in-r"><small>Leave in</small><b>2:23</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="split flip">
+      <div class="rv">
+        <p class="eyebrow">Live 3D map</p>
+        <h2>Watch your bus turn the corner.</h2>
+        <p>Every bus, tram and metro moves on a <b>3D map</b>, smoothed between GPS fixes so nothing jumps. Tap one to follow it along its whole route.</p>
+      </div>
+      <div class="panel rv" data-css="--d:.1s">
+        <div class="map3d">
+          <div class="grid"></div>
+          <svg viewBox="0 0 400 400" aria-hidden="true">
+            <path id="r1" class="route" d="M40 330 C 120 300, 140 220, 210 200 S 320 120, 370 60"/>
+            <path id="r2" class="route2" d="M20 210 C 110 230, 190 260, 260 300 S 360 350, 390 340"/>
+            <circle r="9" fill="#ffd400"><animateMotion dur="9s" repeatCount="indefinite"><mpath href="#r1"/></animateMotion></circle>
+            <circle r="18" fill="#ffd400" opacity=".18"><animateMotion dur="9s" repeatCount="indefinite"><mpath href="#r1"/></animateMotion></circle>
+            <circle r="7" fill="#3aa0ff"><animateMotion dur="13s" begin="-4s" repeatCount="indefinite"><mpath href="#r2"/></animateMotion></circle>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="split">
+      <div class="rv">
+        <p class="eyebrow">Three cities</p>
+        <h2>Turku. Tampere. Helsinki.</h2>
+        <p>Switch city and everything follows: stops, lines, live vehicles and the planner. <b>In English, Finnish or Swedish.</b></p>
+      </div>
+      <div class="panel rv" data-css="--d:.1s">
+        <div class="cities" data-stagger>
+          <div class="city rv"><div><b>Turku</b><small>Föli · buses</small></div><span class="tag">live</span></div>
+          <div class="city rv"><div><b>Tampere</b><small>Nysse · buses and tram</small></div><span class="tag">live</span></div>
+          <div class="city rv"><div><b>Helsinki</b><small>HSL · bus, tram, metro</small></div><span class="tag">live</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap center">
+    <h2 class="rv">Everything else, done right.</h2>
+    <div class="bento" data-stagger>
+      <div class="tile rv wide"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-4 3 3 5-6"/></svg></div><h3>Trip planner</h3><p>Door to door with transfers and walking, from saved places like Home and Work.</p></div>
+      <div class="tile rv"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v3M5 9a7 7 0 0 0 14 0M12 21v-6"/></svg></div><h3>Reminders</h3><p>A nudge before it's time to leave.</p></div>
+      <div class="tile rv"><div class="ic"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></div><h3>Installs like an app</h3><p>Add it to your home screen. It opens instantly.</p></div>
+      <div class="tile rv"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></div><h3>Nearby first</h3><p>The stops around you, sorted by what leaves next.</p></div>
+      <div class="tile rv"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><h3>Matched to the vehicle</h3><p>Each departure is tied to the actual bus that's running it.</p></div>
+    </div>
+  </section>
+
+  <section class="close wrap">
+    <h2 class="rv">Your next ride<br><span class="grad">is already moving.</span></h2>
+    <div class="cta rv" data-css="--d:.1s"><a class="pill lg" href="https://kulku.ishanmalu.dev">Open Kulku</a></div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>Transit data from Föli, Nysse, HSL and Digitransit. Map © OpenFreeMap, OpenStreetMap contributors.</span><a href="/">Side quests by Ishan Malu</a></div></footer>
+</body>
+</html>

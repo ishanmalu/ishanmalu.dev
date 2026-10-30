@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dash · Your whole morning on one screen</title>
+<meta name="description" content="A private daily board: calendar, weather, electricity prices, the next bus, your stocks and a short AI-written brief, on one black glass screen.">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="Dash · Your whole morning on one screen">
+<meta property="og:description" content="Calendar, weather, sähkö, the next bus, stocks and a written brief. One glance, then go.">
+<meta property="og:url" content="https://ishanmalu.dev/intro/dash">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://ishanmalu.dev/og.png">
+<link rel="canonical" href="https://ishanmalu.dev/intro/dash">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="/intro/intro.css">
+<script src="/intro/intro.js"></script>
+</head>
+<body class="dash">
+<nav class="nav">
+  <a class="back" href="/">‹ Side quests</a>
+  <span class="nm">Dash</span>
+  <a class="pill" href="https://dash.ishanmalu.dev">Open</a>
+</nav>
+
+<main>
+  <header class="hero wrap">
+    <p class="eyebrow rv">Dash</p>
+    <h1 class="rv" data-css="--d:.08s">Your whole morning.<br><span class="grad">One glance.</span></h1>
+    <p class="lede rv" data-css="--d:.16s">Calendar, weather, electricity prices, the next bus, your portfolio and a short written brief. <b>Everything you check before leaving, on one quiet screen.</b></p>
+    <div class="cta rv" data-css="--d:.24s">
+      <a class="pill lg" href="https://dash.ishanmalu.dev">Open Dash</a>
+      <a class="link" href="#how">Take a look</a>
+    </div>
+  </header>
+  <div class="stage wrap">
+    <div class="mac"><div class="scr">
+      <div class="bar"><i></i><i></i><i></i><span>dash.ishanmalu.dev</span></div>
+      <div class="d-app">
+        <div class="hi"><div><small>Thursday</small><b>Good morning.</b></div><div class="clock" data-clock>08:12</div></div>
+        <div class="glass brief"><h4>Brief</h4>
+          <p data-type>Cold and clear, −2° rising to 4°. Power is cheapest after 13:00, so run the dishwasher then. Your 10:00 is across town: the 3 from Kotkankatu at 09:31 gets you there with time to spare. Markets opened slightly green.</p>
+        </div>
+        <div class="glass"><h4>Weather · Turku</h4><div class="big">−2°</div><span>Clear · high 4°</span></div>
+        <div class="glass"><h4>Next bus</h4><div class="big">6 min</div><span class="live">Line 3 → Perno</span></div>
+        <div class="glass"><h4>Sähkö now</h4><div class="big">4.2 c</div>
+          <div class="bars">
+            <i data-css="--h:60%"></i><i data-css="--h:72%"></i><i data-css="--h:80%"></i><i class="now" data-css="--h:44%"></i><i data-css="--h:30%"></i><i data-css="--h:22%"></i><i data-css="--h:18%"></i><i data-css="--h:26%"></i><i data-css="--h:40%"></i><i data-css="--h:66%"></i>
+          </div>
+        </div>
+        <div class="glass hide-s"><h4>Portfolio</h4><div class="big up">+1.4%</div>
+          <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none"><path d="M0 30 L12 28 L22 31 L34 22 L46 24 L58 16 L70 19 L82 10 L100 8"/></svg>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <section class="wrap">
+    <div class="stats rv" data-stagger>
+      <div><b>6</b><span>sources pulled together every morning</span></div>
+      <div><b>1</b><span>screen, no scrolling, no tabs</span></div>
+      <div><b>~5 s</b><span>to know how the day looks</span></div>
+    </div>
+  </section>
+
+  <section class="wrap" id="how">
+    <div class="split">
+      <div class="rv">
+        <p class="eyebrow">The brief</p>
+        <h2>It reads the board, so you don't have to.</h2>
+        <p>Every morning a model looks at your calendar, the weather, power prices and the buses, and writes <b>three or four plain sentences</b> about what matters today. No bullet soup.</p>
+      </div>
+      <div class="panel rv" data-css="--d:.1s">
+        <div class="glass brief" data-css="--w:1">
+          <h4>Brief</h4>
+          <p data-type>Gym before work is easy today: nothing until 11:30. Power spikes at 18:00, so charge things this afternoon.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="split flip">
+      <div class="rv">
+        <p class="eyebrow">Today ribbon</p>
+        <h2>Your day as a single line.</h2>
+        <p>Events sit on a ribbon from morning to night, with a glowing marker for <b>right now</b>. Gaps are obvious. So is the meeting you forgot.</p>
+      </div>
+      <div class="panel rv" data-css="--d:.1s">
+        <div class="glass" data-css="--w:1">
+          <h4>Today</h4>
+          <div class="ribbon"><i data-css="--l:8%;--w:10%"></i><i data-css="--l:30%;--w:6%"></i><i data-css="--l:52%;--w:16%"></i><i data-css="--l:80%;--w:8%"></i><em></em></div>
+          <span>08 · · · · 12 · · · · 16 · · · · 20</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="split">
+      <div class="rv">
+        <p class="eyebrow">Private by default</p>
+        <h2>Your numbers stay blurred.</h2>
+        <p>The portfolio is frosted until you enter a code. The code itself is <b>never stored</b>, only its hash, and every key stays on the server.</p>
+      </div>
+      <div class="panel rv" data-css="--d:.1s">
+        <div class="lock">
+          <div class="blurred"><div></div><div></div><div></div><div></div></div>
+          <span class="key"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap center">
+    <h2 class="rv">Made of black glass.</h2>
+    <div class="bento" data-stagger>
+      <div class="tile rv wide"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div><h3>Calendar</h3><p>Today's events from your calendar, recurring ones included.</p></div>
+      <div class="tile rv"><div class="ic"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></div><h3>Pörssisähkö</h3><p>Hourly spot prices, cheapest hours lit.</p></div>
+      <div class="tile rv"><div class="ic"><svg viewBox="0 0 24 24"><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8Z"/></svg></div><h3>Weather</h3><p>From the Finnish Meteorological Institute.</p></div>
+      <div class="tile rv"><div class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="15" rx="3"/><path d="M4 11h16M8 21l1-3M16 21l-1-3"/></svg></div><h3>Next bus</h3><p>Live Föli departures from your stop.</p></div>
+      <div class="tile rv"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></div><h3>Stocks</h3><p>Your holdings and today's move.</p></div>
+    </div>
+  </section>
+
+  <section class="close wrap">
+    <h2 class="rv">Look once.<br><span class="grad">Then get on with it.</span></h2>
+    <div class="cta rv" data-css="--d:.1s"><a class="pill lg" href="https://dash.ishanmalu.dev">Open Dash</a></div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>A private board. Numbers on this page are examples.</span><a href="/">Side quests by Ishan Malu</a></div></footer>
+</body>
+</html>
